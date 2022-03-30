@@ -3,6 +3,21 @@
 # Learn more about .gitignore:
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
+
+EWARM/ns_us300
+EWARM/settings
+*.o
+*.pbi
+*.pdb
+*.browse
+*.linf
+*.pbw
+*.xcl
+*.hex
+*.out
+*.sim
+*.map
+
 # Node artifact files
 node_modules/
 dist/
