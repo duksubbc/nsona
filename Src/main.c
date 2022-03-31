@@ -68,6 +68,8 @@
 //#define INFO_STR(...)     xprintf("\033[33m"__VA_ARGS__"\033[0m")
 //#define INFO(fmt,...)     xprintf(fmt,"\033[33m"__VA_ARGS__"\033[0m")
 #define INFO_PRINT(fmt,arg)     xprintf(fmt,##arg)
+
+#define USEC100  (1000*10)
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -164,19 +166,38 @@ void AD5170_WriteValue(uint8_t data)
 }
 
 
+void calcuarateEnv(CONFIG_T *env, Timer_T *t)
+{
+
+}
 void Load_Env(CONFIG_T *env)
 {
-  if(nev != NULL)
+  if(env != NULL)
   {
-    env->
+    env->setFrequency = 250000;
+    env->setOutputVoltage = 50;
+
+    env->setTBD  =  500; // 25.0ms  range 0.1 ~ 50ms
+    env->setDuty =  50;   // 50 %    range 1 ~ 100 %
+    env->setPRP  = (int32_t)(env->setTBD/env->setDuty)*100;
+
+    env->setSD  =  env->setPRP*3;      // ms
+    env->setISI =  env->setSD*4;  // s
+    env->setBI  = env->setSD + env->setISI;    // s 
+    env->setTD  = 50*1000*10;    // s 
+
+    env->setImpedance = 50;
+
+    env->setAbnormalStopMode = 0;
+    env->setAbnormalStopMaxV = 50;
+    env->setAbnormalStopMaxI = 50;
+    env->setAbnormalStopMinV = 50;
+    env->setAbnormalStopMinI = 50;
+
+    env->sonication = 0;
 
   }
-  uint8_t buf[2];
-  
-  buf[0] = 0x00;
-  buf[1] = data;
-  HAL_I2C_Master_Transmit(&hi2c1,0x58,buf,2,100);
-  //HAL_I2C_Master_Receive(I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint8_t *pData, uint16_t Size, uint32_t Timeout);
+
 }
 
 /* USER CODE END 0 */
@@ -247,6 +268,8 @@ int main(void)
   
   UARTRxBuffIdx = 0;
   HAL_UART_Receive_IT(&huart1,&UARTRxBuff[UARTRxBuffIdx], 1);
+  
+  Load_Env(&gConfig);
   InituserTask02();
   InituserTask03();
 
@@ -524,9 +547,9 @@ static void MX_TIM5_Init(void)
 
   /* USER CODE END TIM5_Init 1 */
   htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 29;
+  htim5.Init.Prescaler = 120-1;
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 8-1;
+  htim5.Init.Period = 2-1;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
@@ -549,7 +572,7 @@ static void MX_TIM5_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 4;
+  sConfigOC.Pulse = 1;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_ENABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
@@ -589,7 +612,7 @@ static void MX_TIM6_Init(void)
   htim6.Instance = TIM6;
   htim6.Init.Prescaler = 59;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 1000-1;
+  htim6.Init.Period = 100-1;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -999,14 +1022,15 @@ static void displayEnv(COMMAMD_ID id)
       INFO("\r\n");
       break;
    case CMD_getTBDAndDuty:
-      INFO("\r\nTBD  = %d ",gConfig.setTBD);
-      INFO("\r\nDuty = %d \r\n",gConfig.setDuty);
+      INFO("\r\nTBD  = %d ms ",    gConfig.setTBD/10);
+      INFO("\r\nDuty = %d %% \r\n",gConfig.setDuty);
       INFO("\r\n");
       break;
-   case CMD_getTiming:\
-      INFO("\r\nSD  = %d ",gConfig.setSD);
-      INFO("\r\nISI = %d ",gConfig.setISI);
-      INFO("\r\nTD  = %d \r\n",gConfig.setTD);
+   case CMD_getTiming:
+      INFO("\r\nSD  = %d ms ",gConfig.setSD/10);
+      INFO("\r\nISI = %d s",  gConfig.setISI/USEC100);
+      INFO("\r\nBI  = %d s",  gConfig.setBI/USEC100);
+      INFO("\r\nTD  = %d s\r\n",gConfig.setTD/USEC100);
       break;
    case CMD_getImpedance:
       INFO("\r\nImpedance  = %d \r\n",gConfig.setImpedance);
@@ -1103,6 +1127,7 @@ void userTask02(void)
                 }
                 else if(id == CMD_setTiming) {
                   gConfig.n_setSD =  ParseNumber(ptr,NULL);
+                  gConfig.n_setTD *= 10;
                 }
                 else if(id == CMD_setImpedance) {
                   gConfig.n_setImpedance =  ParseNumber(ptr,NULL);
@@ -1125,6 +1150,7 @@ void userTask02(void)
                 }
                 else if(id == CMD_setTiming) {
                   gConfig.n_setISI =  ParseNumber(ptr,NULL);
+                  gConfig.n_setISI *= USEC100;
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   gConfig.n_setAbnormalStopMaxV =  ParseNumber(ptr,NULL);
@@ -1133,6 +1159,7 @@ void userTask02(void)
               case 4: 
                 if(id == CMD_setTiming) {
                   gConfig.n_setTD =  ParseNumber(ptr,NULL);
+                  gConfig.n_setTD *= USEC100;
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   gConfig.n_setAbnormalStopMaxI =  ParseNumber(ptr,NULL);
@@ -1168,6 +1195,82 @@ void userTask02(void)
   /* USER CODE END StartTask02 */
 }
 
+int32_t gTBD;
+int32_t gRPR;
+int32_t gSD;
+int32_t gISI;
+int32_t gBI;
+int32_t gTD;
+
+void setSonication(int32_t mode)
+{
+  if(mode  == 0) {
+    gTBD = -1;
+    gRPR = -1;
+    gSD  = -1;
+    gISI = -1;
+    gBI  = -1;
+    gTD  = -1;
+    GPIO_HV_Enable(0);
+    MD1213_OE_Enable(0);
+    HAL_TIM_Base_Stop(&htim6);
+    HAL_TIM_PWM_Stop(&htim5,TIM_CHANNEL_2);
+    HAL_TIM_PWM_Stop(&htim5,TIM_CHANNEL_1);
+  } else {
+    gTBD = gConfig.setTBD;
+    gRPR = gConfig.setPRP;
+    gSD  = gConfig.setSD;
+    gISI = gConfig.setISI;
+    gBI  = gConfig.setBI;
+    gTD  = gConfig.setTD;
+
+    MD1213_OE_Enable(0);
+    HAL_TIM_Base_Start_IT(&htim6);
+    HAL_TIM_PWM_Start(&htim5,TIM_CHANNEL_2);
+    HAL_TIM_PWM_Start(&htim5,TIM_CHANNEL_1);
+    GPIO_HV_Enable(1);
+    INFO("\r\ncycle (TD %d/%d)\r\n",(gTD/USEC100),(gConfig.setTD/USEC100));
+  }
+
+
+}
+
+#define TIM5_BASC_CLK 60000000
+int8_t setFrequncy(int32_t frq)
+{
+  uint32_t base_clk = TIM5_BASC_CLK/2;
+  uint16_t scaler; 
+
+  scaler = base_clk/frq;
+
+  if(scaler < 0xFFFF) {
+    TIM5->PSC = scaler-1;
+    return 1;
+  } 
+
+  return 0;
+}
+
+int32_t setTiming(int32_t SD,int32_t ISI,int32_t *pTD)
+{
+  int32_t bi ,td;
+  td = *pTD;
+  bi = SD + ISI;
+
+  if(td < bi) {
+    *pTD = bi; 
+  }
+  return bi;
+}
+
+int32_t setTBDAndDuty(int32_t tbd,int32_t duty)
+{
+  int32_t rpr;
+
+  rpr = (tbd/duty)*100;
+
+  return rpr;
+}
 
 void InituserTask03(void)
 {
@@ -1184,8 +1287,12 @@ void userTask03(void)
       if(gConfig.updateEnv & (1 << CMD_setFrequency)) {
         gConfig.updateEnv &= ~(1 << CMD_setFrequency);
         gConfig.setFrequency = gConfig.n_setFrequency;
-        DBG_INFO("\r\nUpdate Frequency\r\n");
-        displayEnv(CMD_getFrequency);
+
+        if(setFrequncy(gConfig.setFrequency)) {
+          DBG_INFO("\r\nUpdate Frequency\r\n");
+          displayEnv(CMD_getFrequency);
+
+        }
       }
 
       if(gConfig.updateEnv & (1 << CMD_setOutputVoltage)) {
@@ -1199,6 +1306,9 @@ void userTask03(void)
         gConfig.updateEnv &= ~(1 << CMD_setTBDAndDuty);
         gConfig.setTBD = gConfig.n_setTBD;
         gConfig.setDuty = gConfig.n_setDuty;
+
+        gConfig.setPRP = setTBDAndDuty(gConfig.setTBD,gConfig.setDuty);
+
         DBG_INFO("\r\nUpdate setTBDAndDuty\r\n");
         displayEnv(CMD_getTBDAndDuty);
       }
@@ -1209,6 +1319,9 @@ void userTask03(void)
         gConfig.setSD = gConfig.n_setSD;
         gConfig.setISI = gConfig.n_setISI;
         gConfig.setTD = gConfig.n_setTD;
+
+        gConfig.setBI = setTiming(gConfig.setSD,gConfig.setISI,&gConfig.setTD);
+
         DBG_INFO("\r\nUpdate setTiming\r\n");
         displayEnv(CMD_getTiming);
 
@@ -1238,9 +1351,10 @@ void userTask03(void)
 
       if(gConfig.updateEnv & (1 << CMD_sonication)) {
         gConfig.updateEnv &= ~(1 << CMD_sonication);
-         gConfig.sonication = gConfig.n_sonication;
+        gConfig.sonication = gConfig.n_sonication;
         DBG_INFO("\r\nUpdate sonication\r\n");
-        INFO("\r\nsonication [%s]",gConfig.sonication == 1? "start":"stop");
+        INFO("\r\nsonication [%s]\r\n",gConfig.sonication == 1? "start":"stop");
+        setSonication(gConfig.sonication);
       }
 
     }
@@ -1320,21 +1434,50 @@ void HAL_SYSTICK_Callback(void)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  static int16_t toggle = -1;
   /* Prevent unused argument(s) compilation warning */
   UNUSED(htim);
   
   if(htim->Instance==TIM6)
   {
-    if(toggle  == -1) {
-      MD1213_OE_Enable(0);
-      HAL_TIM_PWM_Start(&htim5,TIM_CHANNEL_2);
-      HAL_TIM_PWM_Start(&htim5,TIM_CHANNEL_1);
-      toggle = 1;
+    if(gTD--) {
+      if((gBI--) > 0) {
+        if((gSD--) > 0) {
+          
+          if((gRPR--) > 0) {
+            if((gTBD--) > 0) {
+              MD1213_OE_Enable(1);
+            } else {
+              MD1213_OE_Enable(0);
+            }
+          } else {
+            gTBD = gConfig.setTBD;
+            gRPR = gConfig.setPRP;
+          }
+          // gSD = 100;
+          // gBI = 100;
+          // gTD = 100;
+          
+          
+        }
+      } else {
+        gSD = gConfig.setSD;
+        gBI = gConfig.setBI;
+        INFO("1 cycle done (TD %d/%d)\r\n",(gTD/USEC100),(gConfig.setTD/USEC100));
+      }
     } else {
-       if(toggle) MD1213_OE_Enable(1);
-       else       MD1213_OE_Enable(0);
-       toggle ^= 1;
+      gTBD = -1;
+      gRPR = -1;
+      gSD  = -1;
+      gISI = -1;
+      gBI  = -1;
+      gTD  = -1;
+
+      if(gConfig.sonication) {
+        gConfig.n_sonication = 0;
+        gConfig.updateEnv |= (1 << CMD_sonication);
+      }
+      MD1213_OE_Enable(0);
+      HAL_TIM_Base_Stop(&htim6);
     }
   }
 

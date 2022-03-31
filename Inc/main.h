@@ -66,8 +66,10 @@ typedef struct _config_t {
   int32_t    setOutputVoltage;
   int32_t    setTBD;
   int32_t    setDuty;
+  int32_t    setPRP;
   int32_t    setSD;
   int32_t    setISI;
+  int32_t    setBI;
   int32_t    setTD;
 
   int32_t    setImpedance;
@@ -81,6 +83,10 @@ typedef struct _config_t {
   int32_t    sonication;
 
 } CONFIG_T;
+
+typedef struct _timer_t {
+  int32_t    sonication;
+} Timer_T;
 
 typedef enum _COMMAMD_ID {
     CMD_VERSION = 0,
