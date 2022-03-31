@@ -1196,7 +1196,19 @@
         <group>
             <name>User</name>
             <file>
+                <name>$PROJ_DIR$\..\Src\buffer.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\debug.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Src\main.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\ringbuffer.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\soft_timer.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\stm32f2xx_hal_msp.c</name>
@@ -1215,6 +1227,9 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\usbd_desc.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\xprintf.c</name>
             </file>
         </group>
     </group>

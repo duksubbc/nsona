@@ -37,7 +37,69 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+typedef struct _config_t {
+  uint8_t    state;
+  uint8_t    flag;
+  int32_t    timeout;
+  int32_t    version;
 
+  uint32_t   updateEnv;
+  int32_t    n_setFrequency;
+  int32_t    n_setOutputVoltage;
+  int32_t    n_setTBD;
+  int32_t    n_setDuty;
+  int32_t    n_setSD;
+  int32_t    n_setISI;
+  int32_t    n_setTD;
+
+  int32_t    n_setImpedance;
+  int32_t    n_setAbnormalStopMode;
+
+  int32_t    n_setAbnormalStopMaxV;
+  int32_t    n_setAbnormalStopMaxI;
+  int32_t    n_setAbnormalStopMinV;
+  int32_t    n_setAbnormalStopMinI;
+
+  int32_t    n_sonication;
+
+  int32_t    setFrequency;
+  int32_t    setOutputVoltage;
+  int32_t    setTBD;
+  int32_t    setDuty;
+  int32_t    setSD;
+  int32_t    setISI;
+  int32_t    setTD;
+
+  int32_t    setImpedance;
+  int32_t    setAbnormalStopMode;
+
+  int32_t    setAbnormalStopMaxV;
+  int32_t    setAbnormalStopMaxI;
+  int32_t    setAbnormalStopMinV;
+  int32_t    setAbnormalStopMinI;
+
+  int32_t    sonication;
+
+} CONFIG_T;
+
+typedef enum _COMMAMD_ID {
+    CMD_VERSION = 0,
+    CMD_setFrequency = 1,
+    CMD_setOutputVoltage = 2,
+    CMD_setTBDAndDuty = 3, 
+    CMD_setTiming = 4,
+    CMD_setImpedance = 5, 
+    CMD_setAbnormalStopMode = 6,
+    CMD_sonication = 7,
+    CMD_clearError = 8,
+    CMD_getFrequency = 9,
+    CMD_getOutputVoltage = 10,
+    CMD_getTBDAndDuty = 11, 
+    CMD_getTiming = 12,
+    CMD_getImpedance = 13, 
+    CMD_getAbnormalStopMode = 14,
+    CMD_unknown = 15
+} COMMAMD_ID;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -82,10 +144,6 @@ void Error_Handler(void);
 #define MD1213_PULSE_A_GPIO_Port GPIOA
 #define MD1213_PULSE_B_Pin GPIO_PIN_1
 #define MD1213_PULSE_B_GPIO_Port GPIOA
-#define EEG_TX_Pin GPIO_PIN_2
-#define EEG_TX_GPIO_Port GPIOA
-#define EEG_RX_Pin GPIO_PIN_3
-#define EEG_RX_GPIO_Port GPIOA
 #define RF_V_Pin GPIO_PIN_4
 #define RF_V_GPIO_Port GPIOA
 #define STHV748_D_IN2_Pin GPIO_PIN_5
