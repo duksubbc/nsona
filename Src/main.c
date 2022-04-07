@@ -20,7 +20,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -29,6 +28,7 @@
 #include "ringbuffer.h"
 #include "xprintf.h"
 #include "soft_timer.h"
+#include "keyscan.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -75,11 +75,14 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
+DAC_HandleTypeDef hdac;
+
 I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
@@ -96,6 +99,8 @@ char     Received[256];
 BUFFER_t USART1_Buffer;
 uint8_t  USART1Buffer[RX_RING_SIZE];
 
+uint16_t tim3_ch1_duty;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -110,8 +115,13 @@ static void MX_TIM8_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM6_Init(void);
+static void MX_DAC_Init(void);
+static void MX_TIM3_Init(void);
 static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
+
+void InituserTask01(void);
+void userTask01(void);
 
 void InituserTask02(void);
 void userTask02(void);
@@ -119,6 +129,8 @@ void userTask02(void);
 void InituserTask03(void);
 void userTask03(void);
 
+
+extern void dig_port(uint16_t val);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -154,6 +166,13 @@ void MD1213_OE_Enable(uint8_t enable)
 
 }
 
+void LED1_ON(uint8_t on)
+{
+  if(!on)
+    HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+  else
+    HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+}
 
 void AD5170_WriteValue(uint8_t data)
 {
@@ -239,8 +258,9 @@ int main(void)
   MX_TIM8_Init();
   MX_USART1_UART_Init();
   MX_USART3_UART_Init();
-  MX_USB_DEVICE_Init();
   MX_TIM6_Init();
+  MX_DAC_Init();
+  MX_TIM3_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
   InitSysTimeOut();
@@ -261,7 +281,7 @@ int main(void)
 
   DBG_INFO("\r\n\r\nNEUROSONA NS-US3000 Single RF ES B'rd");
   DBG_INFO("\r\nBuild Date  %s %s",__DATE__,__TIME__);
-  DBG_INFO("\r\nFW  Version  0.1a\r\n");
+  DBG_INFO("\r\nFW  Version  0.2a\r\n");
   DBG_INFO_MAG("NEUROSONA Co., Ltd. ");
   DBG_INFO_CYN("www.neurosona.com\r\n");
   DBG_PRINT("\r\nNS-US3000 $");
@@ -270,6 +290,8 @@ int main(void)
   HAL_UART_Receive_IT(&huart1,&UARTRxBuff[UARTRxBuffIdx], 1);
   
   Load_Env(&gConfig);
+  
+  InituserTask01();
   InituserTask02();
   InituserTask03();
 
@@ -278,6 +300,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    userTask01();
     userTask02();
     userTask03();
   }
@@ -359,7 +382,7 @@ static void MX_ADC1_Init(void)
   }
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
   */
-  sConfig.Channel = ADC_CHANNEL_4;
+  sConfig.Channel = ADC_CHANNEL_9;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -369,6 +392,44 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief DAC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_DAC_Init(void)
+{
+
+  /* USER CODE BEGIN DAC_Init 0 */
+
+  /* USER CODE END DAC_Init 0 */
+
+  DAC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN DAC_Init 1 */
+
+  /* USER CODE END DAC_Init 1 */
+  /** DAC Initialization 
+  */
+  hdac.Instance = DAC;
+  if (HAL_DAC_Init(&hdac) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** DAC channel OUT1 config 
+  */
+  sConfig.DAC_Trigger = DAC_TRIGGER_NONE;
+  sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
+  if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN DAC_Init 2 */
+
+  /* USER CODE END DAC_Init 2 */
 
 }
 
@@ -528,6 +589,65 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 59;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 1000-1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH /*TIM_OCPOLARITY_LOW*/;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
   * @brief TIM5 Initialization Function
   * @param None
   * @retval None
@@ -547,7 +667,7 @@ static void MX_TIM5_Init(void)
 
   /* USER CODE END TIM5_Init 1 */
   htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 120-1;
+  htim5.Init.Prescaler = 120;
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim5.Init.Period = 2-1;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -612,7 +732,7 @@ static void MX_TIM6_Init(void)
   htim6.Instance = TIM6;
   htim6.Init.Prescaler = 59;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 100-1;
+  htim6.Init.Period = 1000-1;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -839,6 +959,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(EN_HV_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : SW1_Pin */
+  GPIO_InitStruct.Pin = SW1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(SW1_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : STH748_A_IN3_Pin STH748_B_IN3_Pin STH748_D_IN3_Pin STH748_IN4_Pin 
                            LED1_Pin LED2_Pin AUDIO_RESET_Pin */
   GPIO_InitStruct.Pin = STH748_A_IN3_Pin|STH748_B_IN3_Pin|STH748_D_IN3_Pin|STH748_IN4_Pin 
@@ -848,8 +974,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BLE_RESET_Pin STH748_C_IN3_Pin MD1213_OE_Pin */
-  GPIO_InitStruct.Pin = BLE_RESET_Pin|STH748_C_IN3_Pin|MD1213_OE_Pin;
+  /*Configure GPIO pins : BLE_RESET_Pin STH748_C_IN3_Pin */
+  GPIO_InitStruct.Pin = BLE_RESET_Pin|STH748_C_IN3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -867,9 +993,118 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(AUDIO_BUSY_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : MD1213_OE_Pin */
+  GPIO_InitStruct.Pin = MD1213_OE_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(MD1213_OE_GPIO_Port, &GPIO_InitStruct);
+
 }
 
 /* USER CODE BEGIN 4 */
+
+void setPWMDuty(uint16_t duty)
+{
+  uint32_t period = 1000;
+  uint32_t pulse;
+  double x,y,a;
+  
+  a = duty;
+  
+  x = (a/100)*period;
+  
+  pulse = (uint32_t)x;
+
+#if 0 
+  TIM3->CCR1 = pulse;
+#else
+  
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  
+  
+  HAL_TIM_PWM_Stop(&htim3,TIM_CHANNEL_1);
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = pulse;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_1);
+#endif
+  return ;
+  
+}
+
+void InituserTask01(void)
+{
+  tim3_ch1_duty = 0;
+  setSysTimeOut(KEY_TIMER,250);
+  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_1);
+  InitKey();
+}
+
+void userTask01(void)
+{
+  static uint8_t reg = 0;
+  uint8_t press , release;
+  uint8_t key_value = KEY_NONE;
+  
+  /* Infinite loop */
+  if(getSysTimeOut(KEY_TIMER) == 0)
+  {
+    setSysTimeOut(KEY_TIMER,250);
+  }
+  
+  press = 0;
+  release = 0;
+
+  if(PullKey !=KEY_NONE) {
+    key_value = key_table[PullKey];
+    PullKey = KEY_NONE;
+    release = 1;
+  } else if(PushKey != KEY_NONE) {
+    key_value = key_table[PushKey];
+    PushKey = KEY_NONE;
+    press = 1;
+  }
+  
+  if(key_value != KEY_NONE) 
+  {
+    switch(key_value)
+    {
+    case KEY_SW1:
+      if(press) {
+        tim3_ch1_duty += 10;
+        if(tim3_ch1_duty > 100) tim3_ch1_duty = 0;
+        
+        setPWMDuty(tim3_ch1_duty);
+        
+        reg += 25;
+        dig_port(reg);
+        
+        LED1_ON(1);
+        
+        if(gConfig.sonication == 0) {
+          gConfig.n_sonication = 1;
+          gConfig.updateEnv |= (1 << CMD_sonication) ;
+        }   
+      } else {
+        LED1_ON(0);
+      }
+      break;
+
+
+     default:
+      break;
+    }
+  }
+}
+
 
 #define CHARISNUM(x)    ((x) >= '0' && (x) <= '9')
 #define CHAR2NUM(x)     ((x) - '0')
@@ -1001,6 +1236,18 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
       DBG_ERROR("\r\nsonication too many arguments");
     }
     break;
+   case CMD_setDigipot:
+    if(num == 4) {
+      if(gConfig.digipotCH == 1 || gConfig.digipotCH == 2)
+      {
+        gConfig.updateEnv |= (1 << CMD_setDigipot) ;
+        xprintf("\r\nsetsetDigipot OK");
+      }
+      
+    } else {
+      DBG_ERROR("\r\nsetDigipot Invalid arguments");
+    }
+    break;
    case CMD_clearError:
       xprintf("\r\nclearError OK");
     break;
@@ -1113,6 +1360,8 @@ void userTask02(void)
                   id = CMD_getImpedance;
                 } else if(strstr(ptr,"getAbnormalStopMode")!= NULL) {
                   id = CMD_getAbnormalStopMode;
+                } else if(strstr(ptr,"setDigipot")!= NULL) {
+                  id = CMD_setDigipot;
                 }
                 break;
               case 2: 
@@ -1143,6 +1392,9 @@ void userTask02(void)
                     gConfig.n_sonication = 0;
                   }
                 }
+                else if(id == CMD_setDigipot) {
+                  gConfig.digipotCH =  ParseNumber(ptr,NULL);
+                }
                 break;
               case 3:
                 if(id == CMD_setTBDAndDuty) {
@@ -1154,6 +1406,9 @@ void userTask02(void)
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   gConfig.n_setAbnormalStopMaxV =  ParseNumber(ptr,NULL);
+                }
+                else if(id == CMD_setDigipot) {
+                  gConfig.setDigipot =  ParseNumber(ptr,NULL);
                 }
                 break;
               case 4: 
@@ -1356,6 +1611,30 @@ void userTask03(void)
         INFO("\r\nsonication [%s]\r\n",gConfig.sonication == 1? "start":"stop");
         setSonication(gConfig.sonication);
       }
+      
+      if(gConfig.updateEnv & (1 << CMD_setDigipot)) {
+        uint8_t val = 0;
+        HAL_StatusTypeDef ret;
+        gConfig.updateEnv &= ~(1 << CMD_setDigipot);
+        
+        ret = setDigpo(gConfig.digipotCH,gConfig.setDigipot,&val);
+        
+        if(ret == HAL_OK)
+        {
+          DBG_INFO("\r\nUpdate Digital Potentiometer \r\n");
+          INFO("\r\nsetDigpo %d[%d]\r\n",gConfig.setDigipot,val);
+        }
+        else if(ret == HAL_ERROR)
+        {
+          DBG_ERROR("\r\nsetDigpo Error [ERROR]\r\n",);
+        }
+        else if(ret == HAL_BUSY) {
+          DBG_ERROR("\r\nsetDigpo Error [BUSY] \r\n");
+        }
+        else if(ret == HAL_TIMEOUT) {
+          DBG_ERROR("\r\nsetDigpo Error [TIMEOUT]\r\n");
+        }
+      }
 
     }
     setSysTimeOut(UPDATE_TIMER,10);
@@ -1417,6 +1696,7 @@ void HAL_SYSTICK_Callback(void)
   /* NOTE : This function Should not be modified, when the callback is needed,
             the HAL_SYSTICK_Callback could be implemented in the user file
    */
+  static uint8_t tick = 0 ;
   for(int i = 0; i < MAX_TIMER; i++)
   {
     if(systemTimer[i] > 0)
@@ -1429,6 +1709,13 @@ void HAL_SYSTICK_Callback(void)
       gConfig.state = 0;
     }
   }
+  
+//  DEBUG_EvtHandler();
+//  KeyScan();
+  
+  if(tick++ > 500) {
+    tick = 0;
+  }
 
 }
 
@@ -1437,6 +1724,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* Prevent unused argument(s) compilation warning */
   UNUSED(htim);
   
+  static uint16_t tick = 0;
   if(htim->Instance==TIM6)
   {
     if(gTD--) {
@@ -1482,12 +1770,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   }
 
   if(htim->Instance == TIM7) {
-    
     DEBUG_EvtHandler();
-  
-    // KeyScan();
+    KeyScan();
     // Repeat_key_Scan();
-    
+    if(tick++ > 500)
+    {
+      tick = 0;
+      HAL_GPIO_TogglePin(LED2_GPIO_Port,LED2_Pin);
+      
+    }
   }
 
   /* NOTE : This function should not be modified, when the callback is needed,

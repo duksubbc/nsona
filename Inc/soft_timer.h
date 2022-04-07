@@ -9,8 +9,8 @@
 
 #define MAX_TIMER               8
 #define SENSOR_TIMER            0
-#define DEBUG_TIMER            1
-#define UPDATE_TIMER               2
+#define DEBUG_TIMER             1
+#define UPDATE_TIMER            2
 #define LOWPWR_TIMER            3
 #define DELAY_TIMER             4
 #define USER_TIMER		5

@@ -81,6 +81,9 @@ typedef struct _config_t {
   int32_t    setAbnormalStopMinI;
 
   int32_t    sonication;
+  
+  uint8_t    digipotCH;
+  uint8_t    setDigipot;
 
 } CONFIG_T;
 
@@ -89,14 +92,15 @@ typedef struct _timer_t {
 } Timer_T;
 
 typedef enum _COMMAMD_ID {
-    CMD_VERSION = 0,
-    CMD_setFrequency = 1,
-    CMD_setOutputVoltage = 2,
-    CMD_setTBDAndDuty = 3, 
-    CMD_setTiming = 4,
-    CMD_setImpedance = 5, 
-    CMD_setAbnormalStopMode = 6,
-    CMD_sonication = 7,
+    
+    CMD_setFrequency = 0,
+    CMD_setOutputVoltage = 1,
+    CMD_setTBDAndDuty = 2, 
+    CMD_setTiming = 3,
+    CMD_setImpedance = 4, 
+    CMD_setAbnormalStopMode = 5,
+    CMD_sonication = 6,
+    CMD_setDigipot = 7,
     CMD_clearError = 8,
     CMD_getFrequency = 9,
     CMD_getOutputVoltage = 10,
@@ -104,7 +108,8 @@ typedef enum _COMMAMD_ID {
     CMD_getTiming = 12,
     CMD_getImpedance = 13, 
     CMD_getAbnormalStopMode = 14,
-    CMD_unknown = 15
+    CMD_VERSION = 15,
+    CMD_unknown = 16
 } COMMAMD_ID;
 /* USER CODE END ET */
 
@@ -140,8 +145,8 @@ void Error_Handler(void);
 #define CPU_XTALO_GPIO_Port GPIOH
 #define EX_RF_1A_Pin GPIO_PIN_0
 #define EX_RF_1A_GPIO_Port GPIOC
-#define EX_RF_2A_Pin GPIO_PIN_1
-#define EX_RF_2A_GPIO_Port GPIOC
+#define SW1_Pin GPIO_PIN_1
+#define SW1_GPIO_Port GPIOC
 #define EX_RF_3A_Pin GPIO_PIN_2
 #define EX_RF_3A_GPIO_Port GPIOC
 #define EX_RF_4A_Pin GPIO_PIN_3
@@ -154,8 +159,6 @@ void Error_Handler(void);
 #define RF_V_GPIO_Port GPIOA
 #define STHV748_D_IN2_Pin GPIO_PIN_5
 #define STHV748_D_IN2_GPIO_Port GPIOA
-#define RF_A_Pin GPIO_PIN_6
-#define RF_A_GPIO_Port GPIOA
 #define STHV748_A_IN2_Pin GPIO_PIN_7
 #define STHV748_A_IN2_GPIO_Port GPIOA
 #define STH748_A_IN3_Pin GPIO_PIN_4
@@ -194,10 +197,6 @@ void Error_Handler(void);
 #define STHV748_B_IN1_GPIO_Port GPIOA
 #define STHV748_C_IN1_Pin GPIO_PIN_10
 #define STHV748_C_IN1_GPIO_Port GPIOA
-#define USB_DM_Pin GPIO_PIN_11
-#define USB_DM_GPIO_Port GPIOA
-#define USB_DP_Pin GPIO_PIN_12
-#define USB_DP_GPIO_Port GPIOA
 #define AUDIO_CS_Pin GPIO_PIN_15
 #define AUDIO_CS_GPIO_Port GPIOA
 #define LED1_Pin GPIO_PIN_10

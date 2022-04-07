@@ -1202,7 +1202,19 @@
                 <name>$PROJ_DIR$\..\Src\debug.c</name>
             </file>
             <file>
+                <name>$PROJ_DIR$\..\Src\digport.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\keyscan.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Inc\keyscan.h</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Src\main.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Inc\main.h</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\ringbuffer.c</name>
@@ -1215,18 +1227,6 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\stm32f2xx_it.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\Src\usb_device.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\Src\usbd_cdc_if.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\Src\usbd_conf.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\Src\usbd_desc.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\xprintf.c</name>
@@ -1256,6 +1256,12 @@
                 <name>$PROJ_DIR$\..\Drivers\STM32F2xx_HAL_Driver\Src\stm32f2xx_hal_cortex.c</name>
             </file>
             <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F2xx_HAL_Driver\Src\stm32f2xx_hal_dac.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Drivers\STM32F2xx_HAL_Driver\Src\stm32f2xx_hal_dac_ex.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F2xx_HAL_Driver\Src\stm32f2xx_hal_dma.c</name>
             </file>
             <file>
@@ -1275,12 +1281,6 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F2xx_HAL_Driver\Src\stm32f2xx_hal_i2c.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\Drivers\STM32F2xx_HAL_Driver\Src\stm32f2xx_hal_pcd.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\Drivers\STM32F2xx_HAL_Driver\Src\stm32f2xx_hal_pcd_ex.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F2xx_HAL_Driver\Src\stm32f2xx_hal_pwr.c</name>
@@ -1305,27 +1305,6 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Drivers\STM32F2xx_HAL_Driver\Src\stm32f2xx_hal_uart.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\Drivers\STM32F2xx_HAL_Driver\Src\stm32f2xx_ll_usb.c</name>
-            </file>
-        </group>
-    </group>
-    <group>
-        <name>Middlewares</name>
-        <group>
-            <name>USB_Device_Library</name>
-            <file>
-                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Class\CDC\Src\usbd_cdc.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Core\Src\usbd_core.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Core\Src\usbd_ctlreq.c</name>
-            </file>
-            <file>
-                <name>$PROJ_DIR$\..\Middlewares\ST\STM32_USB_Device_Library\Core\Src\usbd_ioreq.c</name>
             </file>
         </group>
     </group>
