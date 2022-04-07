@@ -12,10 +12,13 @@
 
 extern I2C_HandleTypeDef hi2c1;
 
-#define   POSITIVE_AD5170       0x58
-#define   NEGATIVE_AD5170       0x5C
+#define   SPOSITIVE_AD5170       0x58
+#define   SNEGATIVE_AD5170       0x5C
+#define   MPOSITIVE_AD5170       0x5A
+#define   MNEGATIVE_AD5170       0x5E
 
 char str[128];
+
 void dig_port(uint8_t val)
 {
   HAL_StatusTypeDef ret = HAL_OK;
@@ -24,13 +27,13 @@ void dig_port(uint8_t val)
   
   buf[0] = 0x00;
   buf[1] = val;
-  ret = HAL_I2C_Master_Transmit(&hi2c1,NEGATIVE_AD5170,buf,2,100);
+  ret = HAL_I2C_Master_Transmit(&hi2c1,SNEGATIVE_AD5170,buf,2,100);
   if(ret != HAL_OK)
   {
     xprintf(" I2C Read Error %d \r\n",ret);
   }
   
-  ret = HAL_I2C_Master_Receive(&hi2c1,NEGATIVE_AD5170,rcv,2,100);
+  ret = HAL_I2C_Master_Receive(&hi2c1,SNEGATIVE_AD5170,rcv,2,100);
   if(ret != HAL_OK)
   {
     xprintf(" I2C Read Error %d \r\n",ret);
@@ -51,10 +54,14 @@ HAL_StatusTypeDef setDigpo(uint8_t ch , uint8_t val, uint8_t *reg)
   
   
   if(ch == 1)
-    DevAddress = POSITIVE_AD5170;
+    DevAddress = SPOSITIVE_AD5170;
   else if(ch == 2)
-    DevAddress = NEGATIVE_AD5170;
-  else 
+    DevAddress = SNEGATIVE_AD5170;
+  else if(ch == 3)
+    DevAddress = MPOSITIVE_AD5170;
+  else if(ch == 4)
+    DevAddress = MNEGATIVE_AD5170;
+  else
     return HAL_ERROR;
   
   buf[0] = 0x00;

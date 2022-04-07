@@ -1238,10 +1238,11 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
     break;
    case CMD_setDigipot:
     if(num == 4) {
-      if(gConfig.digipotCH == 1 || gConfig.digipotCH == 2)
+      if(gConfig.digipotCH == 1 || gConfig.digipotCH == 2 || gConfig.digipotCH == 3 || gConfig.digipotCH == 4)
       {
         gConfig.updateEnv |= (1 << CMD_setDigipot) ;
-        xprintf("\r\nsetsetDigipot OK");
+      } else {
+        DBG_ERROR("\r\nsetDigipot Invalid CH");
       }
       
     } else {
