@@ -45,43 +45,10 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
-#define _VERSION_     "0.2a"
-
-#define KNRM  "\x1B[0m"
-#define KRED  "\x1B[31m"
-#define KGRN  "\x1B[32m"
-#define KYEL  "\x1B[33m"
-#define KBLU  "\x1B[34m"
-#define KMAG  "\x1B[35m"
-#define KCYN  "\x1B[36m"
-#define KWHT  "\x1B[37m"
-
-#define DBG_PRINT(...)    xprintf(__VA_ARGS__)
-#define DBG_INFO(...)     xprintf("\x1B[32m"__VA_ARGS__"\x1B[0m")
-#define DBG_WARRING(...)  xprintf("\033[33m"__VA_ARGS__"\033[0m")
-#define DBG_ERROR(...)    xprintf("\033[31m"__VA_ARGS__"\033[0m")
-
-#define DBG_INFO_MAG(...)    xprintf("\033[35m"__VA_ARGS__"\033[0m")
-#define DBG_INFO_CYN(...)    xprintf("\033[36m"__VA_ARGS__"\033[0m")
-
-
-#define INFO(fmt, ...)    xprintf("\033[33m");\
-                          xprintf((fmt),##__VA_ARGS__);\
-                          xprintf("\033[0m");
-                          
-//#define INFO_STR(...)     xprintf("\033[33m"__VA_ARGS__"\033[0m")
-//#define INFO(fmt,...)     xprintf(fmt,"\033[33m"__VA_ARGS__"\033[0m")
-#define INFO_PRINT(fmt,arg)     xprintf(fmt,##arg)
-
-//
-#if 1                          
+             
 #define USEC100  (100)
 #define SEC      (1000*10)
-#else
-#define USEC100  (1000)
-#define SEC      (1000*100)
-#endif                          
+                      
                           
 /* USER CODE END PM */
 
@@ -115,7 +82,7 @@ uint8_t  USARTBuffer[RX_RING_SIZE];
 
 uint16_t tim3_ch1_duty;
 
-
+uint8_t  console_debug = 1;
 
 /* USER CODE END PV */
 
@@ -246,6 +213,20 @@ void display_version(void)
 {
   DBG_INFO("\r\nVersion %s(%s %s)\r\n",_VERSION_,__DATE__,__TIME__);
 }
+
+void indro_message(void)
+{
+#if defined(CONFIG_MULTI)
+  DBG_INFO("\r\n\r\nNEUROSONA NS-US300 Multi  RF ES B'rd");
+#else
+  DBG_INFO("\r\n\r\nNEUROSONA NS-US300 Single RF ES B'rd");
+#endif
+  DBG_INFO("\r\nBuild Date  %s %s",__DATE__,__TIME__);
+  DBG_INFO("\r\nFW  Version %s\r\n",_VERSION_);
+  DBG_INFO_MAG("NEUROSONA Co., Ltd. ");
+  DBG_INFO_CYN("www.neurosona.com\r\n");
+  DBG_PRINT("\r\nNS-US300 $");
+}
 /* USER CODE END 0 */
 
 /**
@@ -301,6 +282,7 @@ int main(void)
   DEBUG_LL_USARTInit(&huart1,NULL);
   BUFFER_Init(&USART_Buffer, RX_RING_SIZE, USARTBuffer);
 #endif
+  indro_message();
   
   AUDIO_RESET_LOW();
   HAL_Delay(100);
@@ -313,22 +295,11 @@ int main(void)
 #else
   MD1213_OE_Enable(DISABLE);
 #endif
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-#if defined(CONFIG_MULTI)
-  DBG_INFO("\r\n\r\nNEUROSONA NS-US300 Multi  RF ES B'rd");
-#else
-  DBG_INFO("\r\n\r\nNEUROSONA NS-US300 Single RF ES B'rd");
-#endif
-  DBG_INFO("\r\nBuild Date  %s %s",__DATE__,__TIME__);
-  DBG_INFO("\r\nFW  Version %s\r\n",_VERSION_);
-  DBG_INFO_MAG("NEUROSONA Co., Ltd. ");
-  DBG_INFO_CYN("www.neurosona.com\r\n");
-  DBG_PRINT("\r\nNS-US300 $");
-  
+
   UARTRxBuffIdx = 0;
   
 #if defined(DEBUG_UART3)
@@ -347,8 +318,6 @@ int main(void)
   InituserTask02();
   InituserTask03();
   
-
-
   while (1)
   {
     /* USER CODE END WHILE */
@@ -1947,7 +1916,7 @@ void userTask03(void)
         }
         else if(ret == HAL_ERROR)
         {
-          DBG_ERROR("\r\nsetDigpo Error [ERROR]\r\n",);
+          DBG_ERROR("\r\nsetDigpo Error [ERROR]\r\n");
         }
         else if(ret == HAL_BUSY) {
           DBG_ERROR("\r\nsetDigpo Error [BUSY] \r\n");
