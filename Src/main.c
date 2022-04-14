@@ -16,6 +16,9 @@
   *
   ******************************************************************************
   */
+    
+#include <stdio.h>    
+#include <ctype.h>    
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -43,6 +46,8 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
+#define _VERSION_     "0.2a"
+
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"
@@ -69,7 +74,9 @@
 //#define INFO(fmt,...)     xprintf(fmt,"\033[33m"__VA_ARGS__"\033[0m")
 #define INFO_PRINT(fmt,arg)     xprintf(fmt,##arg)
 
-#define USEC100  (1000*10)
+#define USEC100  (100)
+#define SEC      (1000*10)
+                          
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -89,6 +96,7 @@ TIM_HandleTypeDef htim7;
 TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
@@ -96,10 +104,12 @@ CONFIG_T gConfig;
 uint8_t  UARTRxBuffIdx;
 uint8_t  UARTRxBuff[128];
 char     Received[256];
-BUFFER_t USART1_Buffer;
-uint8_t  USART1Buffer[RX_RING_SIZE];
+BUFFER_t USART_Buffer;
+uint8_t  USARTBuffer[RX_RING_SIZE];
 
 uint16_t tim3_ch1_duty;
+
+
 
 /* USER CODE END PV */
 
@@ -118,6 +128,7 @@ static void MX_TIM6_Init(void);
 static void MX_DAC_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM7_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 void InituserTask01(void);
@@ -143,47 +154,43 @@ void CONFIG_MODE(uint32_t timeOut)
 
 void GPIO_HV_Enable(uint8_t enable)
 {
+  //Single HV EN
   if(enable)
-    HAL_GPIO_WritePin(GPIOC, EN_HV_Pin, GPIO_PIN_SET);
+    GPIOC->BSRR  = EN_HV_Pin;
   else
-    HAL_GPIO_WritePin(GPIOC, EN_HV_Pin, GPIO_PIN_RESET);
+    GPIOC->BSRR = (uint32_t)EN_HV_Pin << 16U;
   
-  
+  //Multy HV EN
   if(enable)
-    HAL_GPIO_WritePin(GPIOB, BATT_V_Pin, GPIO_PIN_SET);
+    GPIOB->BSRR  = BATT_V_Pin;
   else
-    HAL_GPIO_WritePin(GPIOB, BATT_V_Pin, GPIO_PIN_RESET);
-  
+    GPIOB->BSRR = (uint32_t)BATT_V_Pin << 16U;
 }
 
 
 void MD1213_OE_Enable(uint8_t enable)
 {
   if(enable)
-    HAL_GPIO_WritePin(GPIOB, MD1213_OE_Pin, GPIO_PIN_SET);
+    MD1213_OE_GPIO_Port->BSRR  = MD1213_OE_Pin;
   else
-    HAL_GPIO_WritePin(GPIOB, MD1213_OE_Pin, GPIO_PIN_RESET);
+    MD1213_OE_GPIO_Port->BSRR = (uint32_t)MD1213_OE_Pin << 16U;
+}
 
+void STHV748_THSD_Enable(uint8_t enable)
+{
+  if(enable)
+    STHV748_THSD_GPIO_Port->BSRR  = STHV748_THSD_Pin;
+  else
+    STHV748_THSD_GPIO_Port->BSRR = (uint32_t)STHV748_THSD_Pin << 16U;
 }
 
 void LED1_ON(uint8_t on)
 {
   if(!on)
-    HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+    LED1_GPIO_Port->BSRR  = LED1_Pin;
   else
-    HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+    LED1_GPIO_Port->BSRR = (uint32_t)LED1_Pin << 16U;
 }
-
-void AD5170_WriteValue(uint8_t data)
-{
-  uint8_t buf[2];
-  
-  buf[0] = 0x00;
-  buf[1] = data;
-  HAL_I2C_Master_Transmit(&hi2c1,0x58,buf,2,100);
-  //HAL_I2C_Master_Receive(I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint8_t *pData, uint16_t Size, uint32_t Timeout);
-}
-
 
 void calcuarateEnv(CONFIG_T *env, Timer_T *t)
 {
@@ -198,14 +205,24 @@ void Load_Env(CONFIG_T *env)
 
     env->setTBD  =  500; // 25.0ms  range 0.1 ~ 50ms
     env->setDuty =  50;   // 50 %    range 1 ~ 100 %
-    env->setPRP  = (int32_t)(env->setTBD/env->setDuty)*100;
+    env->setPRP  = (int32_t)(100.0/env->setDuty)*(env->setTBD);
 
-    env->setSD  =  env->setPRP*3;      // ms
-    env->setISI =  env->setSD*4;  // s
+    env->setSD  =  env->setPRP*5;      // ms
+    env->setISI =  env->setSD*10;       // s
     env->setBI  = env->setSD + env->setISI;    // s 
-    env->setTD  = 50*1000*10;    // s 
+    env->setTD  = 100*SEC;     // s 
 
     env->setImpedance = 50;
+    
+    
+    env->setDelay[RF_CH0] = 0*USEC100;
+    env->setDelay[RF_CH1] = 0*USEC100;
+    env->setDelay[RF_CH2] = 10*USEC100;
+    env->setDelay[RF_CH3] = 20*USEC100;
+    env->setDelay[RF_CH4] = 30*USEC100;
+    env->setDelay[RF_CH5] = 40*USEC100;
+    env->setDelay[RF_CH6] = 50*USEC100;
+    
 
     env->setAbnormalStopMode = 0;
     env->setAbnormalStopMaxV = 50;
@@ -219,6 +236,10 @@ void Load_Env(CONFIG_T *env)
 
 }
 
+void display_version(void)
+{
+  DBG_INFO("\r\nVersion %s(%s %s)\r\n",_VERSION_,__DATE__,__TIME__);
+}
 /* USER CODE END 0 */
 
 /**
@@ -228,8 +249,7 @@ void Load_Env(CONFIG_T *env)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  uint8_t resis = 0;
-
+//  uint8_t resis = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -262,38 +282,66 @@ int main(void)
   MX_DAC_Init();
   MX_TIM3_Init();
   MX_TIM7_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   InitSysTimeOut();
-  DEBUG_LL_USARTInit(&huart1);
-  BUFFER_Init(&USART1_Buffer, RX_RING_SIZE, USART1Buffer);
+#if defined(DEBUG_UART3)
+  DEBUG_LL_USARTInit(&huart1,&huart3);
+  BUFFER_Init(&USART_Buffer, RX_RING_SIZE, USARTBuffer);
+#elif defined(DEBUG_UART2)
+  DEBUG_LL_USARTInit(&huart1,&huart2);
+  BUFFER_Init(&USART_Buffer, RX_RING_SIZE, USARTBuffer);
+#else
+  DEBUG_LL_USARTInit(&huart1,NULL);
+  BUFFER_Init(&USART_Buffer, RX_RING_SIZE, USARTBuffer);
+#endif
   
+  AUDIO_RESET_LOW();
+  HAL_Delay(100);
+  AUDIO_RESET_HI();
   
-  //HAL_TIM_PWM_Start(&htim5,TIM_CHANNEL_1);
-  //HAL_TIM_Base_Start_IT(&htim6);
-  MD1213_OE_Enable(0);
-  GPIO_HV_Enable(0);
-  //GPIO_HV_Enable(0);
+  GPIO_HV_Enable(DISABLE);
+  
+#if defined(CONFIG_MULTI)  
+  STHV748_THSD_Enable(DISABLE);
+#else
+  MD1213_OE_Enable(DISABLE);
+#endif
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-  DBG_INFO("\r\n\r\nNEUROSONA NS-US3000 Single RF ES B'rd");
+#if defined(CONFIG_MULTI)
+  DBG_INFO("\r\n\r\nNEUROSONA NS-US300 Multi  RF ES B'rd");
+#else
+  DBG_INFO("\r\n\r\nNEUROSONA NS-US300 Single RF ES B'rd");
+#endif
   DBG_INFO("\r\nBuild Date  %s %s",__DATE__,__TIME__);
-  DBG_INFO("\r\nFW  Version  0.2a\r\n");
+  DBG_INFO("\r\nFW  Version %s\r\n",_VERSION_);
   DBG_INFO_MAG("NEUROSONA Co., Ltd. ");
   DBG_INFO_CYN("www.neurosona.com\r\n");
-  DBG_PRINT("\r\nNS-US3000 $");
+  DBG_PRINT("\r\nNS-US300 $");
   
   UARTRxBuffIdx = 0;
-  HAL_UART_Receive_IT(&huart1,&UARTRxBuff[UARTRxBuffIdx], 1);
+  
+#if defined(DEBUG_UART3)
+  HAL_UART_Receive_IT(&huart3,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);
+  HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
+#elif defined(DEBUG_UART2)
+  HAL_UART_Receive_IT(&huart2,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1); 
+  HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
+#else
+  HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
+#endif
   
   Load_Env(&gConfig);
   
   InituserTask01();
   InituserTask02();
   InituserTask03();
+  
+
 
   while (1)
   {
@@ -318,12 +366,13 @@ void SystemClock_Config(void)
 
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 25;
-  RCC_OscInitStruct.PLL.PLLN = 240;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 13;
+  RCC_OscInitStruct.PLL.PLLN = 195;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 5;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -489,8 +538,8 @@ static void MX_SPI1_Init(void)
   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi1.Init.NSS = SPI_NSS_HARD_OUTPUT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.NSS = SPI_NSS_SOFT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -526,12 +575,12 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 0;
+  htim1.Init.Prescaler = 120;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 0;
+  htim1.Init.Period = 2-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
@@ -552,16 +601,18 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.Pulse = 1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_SET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_SET;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
@@ -634,7 +685,7 @@ static void MX_TIM3_Init(void)
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH /*TIM_OCPOLARITY_LOW*/;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
@@ -732,7 +783,7 @@ static void MX_TIM6_Init(void)
   htim6.Instance = TIM6;
   htim6.Init.Prescaler = 59;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 1000-1;
+  htim6.Init.Period = 100-1;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -809,12 +860,12 @@ static void MX_TIM8_Init(void)
 
   /* USER CODE END TIM8_Init 1 */
   htim8.Instance = TIM8;
-  htim8.Init.Prescaler = 0;
+  htim8.Init.Prescaler = 120;
   htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim8.Init.Period = 0;
+  htim8.Init.Period = 2-1;
   htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim8.Init.RepetitionCounter = 0;
-  htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim8) != HAL_OK)
   {
     Error_Handler();
@@ -835,9 +886,9 @@ static void MX_TIM8_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.Pulse = 1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
@@ -897,6 +948,39 @@ static void MX_USART1_UART_Init(void)
 }
 
 /**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
   * @brief USART3 Initialization Function
   * @param None
   * @retval None
@@ -940,24 +1024,27 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, EN_HV_Pin|STH748_A_IN3_Pin|STH748_B_IN3_Pin|STH748_D_IN3_Pin 
-                          |STH748_IN4_Pin|LED1_Pin|LED2_Pin|AUDIO_RESET_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, EN_HV_Pin|STHV748_A_IN3_Pin|STHV748_B_IN3_Pin|STHV748_D_IN3_Pin 
+                          |STHV748_IN4_Pin|STHV748_THSD_Pin|LED1_Pin|LED2_Pin 
+                          |AUDIO_RESET_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, BLE_RESET_Pin|STH748_C_IN3_Pin|MD1213_OE_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, BLE_RESET_Pin|STHV748_C_IN3_Pin|MD1213_OE_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : EN_HV_Pin */
-  GPIO_InitStruct.Pin = EN_HV_Pin;
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(AUDIO_CS_GPIO_Port, AUDIO_CS_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pins : EN_HV_Pin LED1_Pin LED2_Pin */
+  GPIO_InitStruct.Pin = EN_HV_Pin|LED1_Pin|LED2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(EN_HV_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SW1_Pin */
   GPIO_InitStruct.Pin = SW1_Pin;
@@ -965,31 +1052,39 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SW1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : STH748_A_IN3_Pin STH748_B_IN3_Pin STH748_D_IN3_Pin STH748_IN4_Pin 
-                           LED1_Pin LED2_Pin AUDIO_RESET_Pin */
-  GPIO_InitStruct.Pin = STH748_A_IN3_Pin|STH748_B_IN3_Pin|STH748_D_IN3_Pin|STH748_IN4_Pin 
-                          |LED1_Pin|LED2_Pin|AUDIO_RESET_Pin;
+  /*Configure GPIO pins : STHV748_A_IN3_Pin STHV748_B_IN3_Pin STHV748_D_IN3_Pin STHV748_IN4_Pin 
+                           STHV748_THSD_Pin */
+  GPIO_InitStruct.Pin = STHV748_A_IN3_Pin|STHV748_B_IN3_Pin|STHV748_D_IN3_Pin|STHV748_IN4_Pin 
+                          |STHV748_THSD_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BLE_RESET_Pin STH748_C_IN3_Pin */
-  GPIO_InitStruct.Pin = BLE_RESET_Pin|STH748_C_IN3_Pin;
+  /*Configure GPIO pins : BLE_RESET_Pin STHV748_C_IN3_Pin */
+  GPIO_InitStruct.Pin = BLE_RESET_Pin|STHV748_C_IN3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : AUDIO_CS_Pin */
+  GPIO_InitStruct.Pin = AUDIO_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(AUDIO_CS_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : AUDIO_RESET_Pin */
+  GPIO_InitStruct.Pin = AUDIO_RESET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : T_Pin */
-  GPIO_InitStruct.Pin = T_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(T_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(AUDIO_RESET_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : AUDIO_BUSY_Pin */
   GPIO_InitStruct.Pin = AUDIO_BUSY_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(AUDIO_BUSY_GPIO_Port, &GPIO_InitStruct);
 
@@ -1008,11 +1103,11 @@ void setPWMDuty(uint16_t duty)
 {
   uint32_t period = 1000;
   uint32_t pulse;
-  double x,y,a;
+  double x,y;
   
-  a = duty;
+  y = duty;
   
-  x = (a/100)*period;
+  x = (y/100)*period;
   
   pulse = (uint32_t)x;
 
@@ -1050,7 +1145,7 @@ void InituserTask01(void)
 
 void userTask01(void)
 {
-  static uint8_t reg = 0;
+//  static uint8_t reg = 0;
   uint8_t press , release;
   uint8_t key_value = KEY_NONE;
   
@@ -1079,25 +1174,27 @@ void userTask01(void)
     {
     case KEY_SW1:
       if(press) {
-        tim3_ch1_duty += 10;
-        if(tim3_ch1_duty > 100) tim3_ch1_duty = 0;
-        
-        setPWMDuty(tim3_ch1_duty);
-        
-        reg += 25;
-        dig_port(reg);
+//        tim3_ch1_duty += 10;
+//        if(tim3_ch1_duty > 100) tim3_ch1_duty = 0;
+//        
+//        setPWMDuty(tim3_ch1_duty);
+//        
+//        reg += 25;
+//        dig_port(reg);
         
         LED1_ON(1);
         
         if(gConfig.sonication == 0) {
           gConfig.n_sonication = 1;
           gConfig.updateEnv |= (1 << CMD_sonication) ;
-        }   
-      } else {
+        } else {
+          gConfig.n_sonication = 0;
+          gConfig.updateEnv |= (1 << CMD_sonication) ;
+        }
+      } else if(release) {
         LED1_ON(0);
       }
       break;
-
 
      default:
       break;
@@ -1141,8 +1238,10 @@ static int32_t ParseNumber(char* ptr, uint8_t* cnt) {
 	/* Return number */
 	return sum;
 }
+
 static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
 {
+
   switch(id) {
    case CMD_setFrequency:
     if(num == 3) {
@@ -1207,6 +1306,25 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
         DBG_ERROR("\r\nsetImpedance too few arguments");
     }
     break;
+   case CMD_setDelay:
+    if(num == 5) {
+      gConfig.updateEnv |= (1 << CMD_setDelay) ;
+      xprintf("\r\nsetDelay OK");
+    } else {
+      gConfig.n_setDelay[RF_CH0] = gConfig.setDelay[RF_CH0];
+      gConfig.n_setDelay[RF_CH1] = gConfig.setDelay[RF_CH1];
+      gConfig.n_setDelay[RF_CH2] = gConfig.setDelay[RF_CH2];
+      gConfig.n_setDelay[RF_CH3] = gConfig.setDelay[RF_CH3];
+      gConfig.n_setDelay[RF_CH4] = gConfig.setDelay[RF_CH4];
+      gConfig.n_setDelay[RF_CH5] = gConfig.setDelay[RF_CH5];
+      gConfig.n_setDelay[RF_CH6] = gConfig.setDelay[RF_CH6];
+      
+      if(num > 5)
+        DBG_ERROR("\r\nsetsetDelay too many arguments");
+      else
+        DBG_ERROR("\r\nsetsetDelay too few arguments");
+    }
+    break;
    case CMD_setAbnormalStopMode:
     if(num == 7) {
       gConfig.updateEnv |= (1 << CMD_setAbnormalStopMode) ;
@@ -1244,7 +1362,6 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
       } else {
         DBG_ERROR("\r\nsetDigipot Invalid CH");
       }
-      
     } else {
       DBG_ERROR("\r\nsetDigipot Invalid arguments");
     }
@@ -1255,12 +1372,31 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
   }
 }
 
+static void cmd_hemp(void)
+{
+  INFO("\r\n=================================");
+  INFO("\r\nCommand List");
+  INFO("\r\n%s","nsbt version");
+  INFO("\r\n%s","nsbt setFrequency 100");
+  INFO("\r\n%s","nsbt setTBDAndDuty 10 20");
+  INFO("\r\n%s","nsbt setTiming 100 3 600");
+  INFO("\r\n%s","nsbt setImpedance 2");
+  INFO("\r\n%s","nsbt setAbnormalStopMode 1 1200 1100 300 200");
+  INFO("\r\n%s","nsbt sonication start[stop]");
+  INFO("\r\n%s","nsbt clearError");
+  INFO("\r\n%s","nsbt setDigipot 0 25");
+  INFO("\r\n=================================");
+}
 
 static void displayEnv(COMMAMD_ID id)
 {
+  char str[64];
   switch(id) {
+   case CMD_HELP:
+      cmd_hemp();
+      break;  
    case CMD_VERSION:
-      INFO("\r\nVersion 0.1\r\n");
+      display_version();
       break; 
    case CMD_getFrequency:
       INFO("\r\nFrequency = %d Hz\r\n",gConfig.setFrequency);
@@ -1270,25 +1406,34 @@ static void displayEnv(COMMAMD_ID id)
       INFO("\r\n");
       break;
    case CMD_getTBDAndDuty:
-      INFO("\r\nTBD  = %d ms ",    gConfig.setTBD/10);
+      sprintf(str,"\r\nTBD  = %0.1f ms (%d) ",(float)gConfig.setTBD/10,gConfig.setTBD);
+      INFO(str);
+      sprintf(str,"\r\nRPR  = %0.1f ms (%d) ",(float)gConfig.setPRP/10,gConfig.setPRP);
+      INFO(str);
       INFO("\r\nDuty = %d %% \r\n",gConfig.setDuty);
       INFO("\r\n");
       break;
    case CMD_getTiming:
-      INFO("\r\nSD  = %d ms ",gConfig.setSD/10);
-      INFO("\r\nISI = %d s",  gConfig.setISI/USEC100);
-      INFO("\r\nBI  = %d s",  gConfig.setBI/USEC100);
-      INFO("\r\nTD  = %d s\r\n",gConfig.setTD/USEC100);
+      INFO("\r\nSD  = %6d ms (%8d)",   gConfig.setSD/10,   gConfig.setSD);
+      INFO("\r\nISI = %6d S  (%8d)",   gConfig.setISI/SEC, gConfig.setISI);
+      INFO("\r\nBI  = %6d S  (%8d)",    gConfig.setBI/SEC, gConfig.setBI);
+      INFO("\r\nTD  = %6d S  (%8d)\r\n",gConfig.setTD/SEC, gConfig.setTD);
+      break;
+   case CMD_getDelay:
+      INFO("\r\nCH1  = %6d us (%8d)",    gConfig.setDelay[RF_CH1]*USEC100 , gConfig.setDelay[RF_CH1]);
+      INFO("\r\nCH2  = %6d us (%8d)",    gConfig.setDelay[RF_CH2]*USEC100 , gConfig.setDelay[RF_CH2]);
+      INFO("\r\nCH3  = %6d us (%8d)",    gConfig.setDelay[RF_CH3]*USEC100,  gConfig.setDelay[RF_CH3]);
+      INFO("\r\nCH4  = %6d us (%8d)\r\n",gConfig.setDelay[RF_CH4]*USEC100,  gConfig.setDelay[RF_CH4]);
       break;
    case CMD_getImpedance:
       INFO("\r\nImpedance  = %d \r\n",gConfig.setImpedance);
       break;
    case CMD_getAbnormalStopMode:
-      INFO("\r\nAbnormal[%s]",gConfig.setAbnormalStopMode == 0? "Off":"On");
-      INFO("\r\nMax Volt  = %d ",gConfig.setAbnormalStopMaxV);
-      INFO("\r\nmin Volt   = %d ",gConfig.setAbnormalStopMinV);
-      INFO("\r\nMax Current  = %d ",gConfig.setAbnormalStopMaxI);
-      INFO("\r\nmin Current  = %d \r\n",gConfig.setAbnormalStopMinI);
+      INFO("\r\nAbnormal[%3s]",gConfig.setAbnormalStopMode == 0? "Off":"On");
+      INFO("\r\nMax Volt     = %5d ",gConfig.setAbnormalStopMaxV);
+      INFO("\r\nmin Volt     = %5d ",gConfig.setAbnormalStopMinV);
+      INFO("\r\nMax Current  = %5d ",gConfig.setAbnormalStopMaxI);
+      INFO("\r\nmin Current  = %5d \r\n",gConfig.setAbnormalStopMinI);
       break;
   }
 }
@@ -1305,7 +1450,7 @@ void userTask02(void)
   /* Infinite loop */
   if(getSysTimeOut(DEBUG_TIMER) == 0)
   {
-    uint16_t res ;
+    uint16_t res , i ;
     COMMAMD_ID id;
     const char *text = "\r\nNS-US3000 $ ";
   
@@ -1313,8 +1458,15 @@ void userTask02(void)
     {
       char* ptr;
       uint16_t num = 0;
-      res = BUFFER_ReadString(&USART1_Buffer, Received, sizeof(Received));
+      res = BUFFER_ReadString(&USART_Buffer, Received, sizeof(Received));
       if(res > 0 ) {
+        
+        for(i = 0 ; i < res ;i++) {
+          if (isupper(Received[i])){
+              Received[i] = tolower(Received[i]);
+          }
+        }
+        
         if(strstr(Received,"nsbt") != NULL) {
 
           /* Get token */
@@ -1330,38 +1482,61 @@ void userTask02(void)
                 break;
               case 1:
                 /* Ignore first and last " */
-                if(strstr (ptr,"version") != NULL) {
+                if(strstr (ptr,"?") != NULL) {
+                  id = CMD_HELP;
+                } else if(strstr (ptr,"help") != NULL) {
+                  id = CMD_HELP;
+                } else if(strstr (ptr,"version") != NULL) {
                   id = CMD_VERSION;
-                  
-                } else if(strstr(ptr,"setFrequency") != NULL)     {
+                } else if(strstr(ptr,"setfrequency") != NULL)     {
+                  // setFrequency
                   id = CMD_setFrequency;
-                } else if(strstr(ptr,"setOutputVoltage") != NULL) {
+                } else if(strstr(ptr,"setoutputvoltage") != NULL) {
+                  //setOutputVoltage
                   id = CMD_setOutputVoltage;
-                } else if(strstr(ptr,"setTBDAndDuty")!= NULL)    {
+                } else if(strstr(ptr,"settbdandduty")!= NULL)    {
+                  //setTBDAndDuty
                   id = CMD_setTBDAndDuty;
-                } else if(strstr(ptr,"setTiming")!= NULL)         {
+                } else if(strstr(ptr,"settiming")!= NULL)         {
+                  //setTiming
                   id = CMD_setTiming;
-                } else if(strstr(ptr,"setImpedance")!= NULL)      {
+                } else if(strstr(ptr,"setimpedance")!= NULL)      {
+                  //setImpedance
                   id = CMD_setImpedance;
-                } else if(strstr(ptr,"setAbnormalStopMode")!= NULL) {
+                } else if(strstr(ptr,"setdelay")!= NULL)      {
+                  //setImpedance
+                  id = CMD_setDelay;
+                } else if(strstr(ptr,"setabnormalstopmode")!= NULL) {
+                  //setAbNormalStopMode
                   id = CMD_setAbnormalStopMode;
                 } else if(strstr(ptr,"sonication")!= NULL) {
                   id = CMD_sonication;
-                } else if(strstr(ptr,"clearError")!= NULL) {
+                } else if(strstr(ptr,"clearerror")!= NULL) {
+                  //clearError
                   id = CMD_clearError;
-                } else if(strstr(ptr,"getFrequency")!= NULL)     {
+                } else if(strstr(ptr,"getfrequency")!= NULL)     {
+                  //getFrequency
                   id = CMD_getFrequency;
-                } else if(strstr(ptr,"getOutputVoltage")!= NULL) {
+                } else if(strstr(ptr,"getoutputvoltage")!= NULL) {
+                  //getOutputVoltage
                   id = CMD_getOutputVoltage;
-                } else if(strstr(ptr,"getTBDAndDuty")!= NULL)    {
+                } else if(strstr(ptr,"gettbdandduty")!= NULL)    {
+                  //getTBDAndDuty
                   id = CMD_getTBDAndDuty;
-                } else if(strstr(ptr,"getTiming")!= NULL)         {
+                } else if(strstr(ptr,"gettiming")!= NULL)         {
+                  //getTiming
                   id = CMD_getTiming;
-                } else if(strstr(ptr,"getImpedance")!= NULL)      {
+                } else if(strstr(ptr,"getimpedance")!= NULL)      {
+                  //getImpedance
                   id = CMD_getImpedance;
-                } else if(strstr(ptr,"getAbnormalStopMode")!= NULL) {
+                } else if(strstr(ptr,"getdelay")!= NULL)      {
+                  //setImpedance
+                  id = CMD_getDelay;
+                } else if(strstr(ptr,"getabnormalstopmode")!= NULL) {
+                  //getAbnormalStopMode
                   id = CMD_getAbnormalStopMode;
-                } else if(strstr(ptr,"setDigipot")!= NULL) {
+                } else if(strstr(ptr,"setdigipot")!= NULL) {
+                  //setDigpot
                   id = CMD_setDigipot;
                 }
                 break;
@@ -1377,10 +1552,13 @@ void userTask02(void)
                 }
                 else if(id == CMD_setTiming) {
                   gConfig.n_setSD =  ParseNumber(ptr,NULL);
-                  gConfig.n_setTD *= 10;
+                  gConfig.n_setSD *= 10;
                 }
                 else if(id == CMD_setImpedance) {
                   gConfig.n_setImpedance =  ParseNumber(ptr,NULL);
+                }
+                else if(id == CMD_setDelay) {
+                  gConfig.n_setDelay[RF_CH1] =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   gConfig.n_setAbnormalStopMode =  ParseNumber(ptr,NULL);
@@ -1403,7 +1581,10 @@ void userTask02(void)
                 }
                 else if(id == CMD_setTiming) {
                   gConfig.n_setISI =  ParseNumber(ptr,NULL);
-                  gConfig.n_setISI *= USEC100;
+                  gConfig.n_setISI *= SEC;
+                }
+                else if(id == CMD_setDelay) {
+                  gConfig.n_setDelay[RF_CH2] =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   gConfig.n_setAbnormalStopMaxV =  ParseNumber(ptr,NULL);
@@ -1415,22 +1596,36 @@ void userTask02(void)
               case 4: 
                 if(id == CMD_setTiming) {
                   gConfig.n_setTD =  ParseNumber(ptr,NULL);
-                  gConfig.n_setTD *= USEC100;
+                  gConfig.n_setTD *= SEC;
+                }
+                else if(id == CMD_setDelay) {
+                  gConfig.n_setDelay[RF_CH3] =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   gConfig.n_setAbnormalStopMaxI =  ParseNumber(ptr,NULL);
                 }
                 break;
-              case 5: 
-                if(id == CMD_setAbnormalStopMode) {
+              case 5:
+                if(id == CMD_setDelay) {
+                  gConfig.n_setDelay[RF_CH4] =  ParseNumber(ptr,NULL);
+                }
+                else if(id == CMD_setAbnormalStopMode) {
                   gConfig.n_setAbnormalStopMinV =  ParseNumber(ptr,NULL);
                 }
                 break;
-              case 6: 
-                if(id == CMD_setAbnormalStopMode) {
+              case 6:
+                if(id == CMD_setDelay) {
+                  gConfig.n_setDelay[RF_CH5] =  ParseNumber(ptr,NULL);
+                }
+                else if(id == CMD_setAbnormalStopMode) {
                   gConfig.n_setAbnormalStopMinI =  ParseNumber(ptr,NULL);
                 }
                 break;
+              case 7:
+                if(id == CMD_setDelay) {
+                  gConfig.n_setDelay[RF_CH6] =  ParseNumber(ptr,NULL);
+                }
+                break;  
               default: break;
             }
 
@@ -1451,58 +1646,172 @@ void userTask02(void)
   /* USER CODE END StartTask02 */
 }
 
-int32_t gTBD;
-int32_t gRPR;
-int32_t gSD;
-int32_t gISI;
-int32_t gBI;
-int32_t gTD;
+int32_t gTBD[MAX_RF_CH];
+int32_t gRPR[MAX_RF_CH];
+int32_t gSD[MAX_RF_CH];
+int32_t gISI[MAX_RF_CH];
+int32_t gBI[MAX_RF_CH];
+int32_t gTD[MAX_RF_CH];
+int32_t gDelay[MAX_RF_CH];
+
+static void init_timing(void)
+{
+  int i;
+     
+  for(i = RF_CH0 ; i < MAX_RF_CH ; i++) {
+    gTBD[i] = -1;
+    gRPR[i] = -1;
+    gSD[i]  = -1;
+    gISI[i] = -1;
+    gBI[i]  = -1;
+    gTD[i]  = -1;
+  }
+  
+  gDelay[RF_CH0] = gConfig.setDelay[RF_CH0];
+  gDelay[RF_CH1] = gConfig.setDelay[RF_CH1];
+  gDelay[RF_CH2] = gConfig.setDelay[RF_CH2];
+  gDelay[RF_CH3] = gConfig.setDelay[RF_CH3];
+  gDelay[RF_CH4] = gConfig.setDelay[RF_CH4];
+  gDelay[RF_CH5] = gConfig.setDelay[RF_CH5];
+  gDelay[RF_CH6] = gConfig.setDelay[RF_CH6];
+}
+
+
+static void set_timing(void)
+{
+  int i;
+      
+//    gTBD = gConfig.setTBD;
+//    gRPR = gConfig.setPRP;
+//    gSD  = gConfig.setSD;
+//    gISI = gConfig.setISI;
+//    gBI  = gConfig.setBI;
+//    gTD  = gConfig.setTD;
+  for(i = RF_CH0 ; i < MAX_RF_CH ; i++) {
+    gTBD[i] = gConfig.setTBD;
+    gRPR[i] = gConfig.setPRP;
+    gSD[i]  = gConfig.setSD;
+    gISI[i] = gConfig.setISI;
+    gBI[i]  = gConfig.setBI;
+    gTD[i]  = gConfig.setTD;
+  }
+  
+  gDelay[RF_CH0] = gConfig.setDelay[RF_CH0];
+  gDelay[RF_CH1] = gConfig.setDelay[RF_CH1];
+  gDelay[RF_CH2] = gConfig.setDelay[RF_CH2];
+  gDelay[RF_CH3] = gConfig.setDelay[RF_CH3];
+  gDelay[RF_CH4] = gConfig.setDelay[RF_CH4];
+  gDelay[RF_CH5] = gConfig.setDelay[RF_CH5];
+  gDelay[RF_CH6] = gConfig.setDelay[RF_CH6];
+  
+  INFO("\r\ncycle (TD %d/%d)\r\n",(gTD[RF_CH0]/SEC),(gConfig.setTD/SEC));
+}
+
+#if !defined(CONFIG_MULTI)
+static void start_single_timer(void)
+{
+  HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_PWM_Start(&htim5,TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim5,TIM_CHANNEL_1);
+  
+}
+
+static void stop_single_timer(void)
+{
+  HAL_TIM_Base_Stop(&htim6);
+  HAL_TIM_PWM_Stop(&htim5,TIM_CHANNEL_2);
+  HAL_TIM_PWM_Stop(&htim5,TIM_CHANNEL_1);
+}
+#endif
+
+#if defined(CONFIG_MULTI)
+static void start_multi_timer(uint8_t ch)
+{
+  if(ch == RF_CH0) {
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
+    
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);
+    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
+    
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);
+    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
+    
+    HAL_TIM_PWM_Start(&htim8,TIM_CHANNEL_1);
+    HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_1);
+  } else if(ch == RF_CH1) {
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
+  } else if(ch == RF_CH2) {
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);
+    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
+  } else if(ch == RF_CH3) {
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);
+    HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
+  } else if(ch == RF_CH4) {
+    HAL_TIM_PWM_Start(&htim8,TIM_CHANNEL_1);
+    HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_1);
+  }
+}
+
+static void stop_multi_timer(void)
+{
+  HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_1);
+  HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_1);
+  
+  HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_2);
+  HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_2);
+  
+  HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_3);
+  HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_3);
+  
+  HAL_TIM_PWM_Stop(&htim8,TIM_CHANNEL_1);
+  HAL_TIMEx_PWMN_Stop(&htim8, TIM_CHANNEL_1);
+}
+#endif
 
 void setSonication(int32_t mode)
 {
   if(mode  == 0) {
-    gTBD = -1;
-    gRPR = -1;
-    gSD  = -1;
-    gISI = -1;
-    gBI  = -1;
-    gTD  = -1;
+    init_timing();
     GPIO_HV_Enable(0);
-    MD1213_OE_Enable(0);
+#if defined(CONFIG_MULTI)
     HAL_TIM_Base_Stop(&htim6);
-    HAL_TIM_PWM_Stop(&htim5,TIM_CHANNEL_2);
-    HAL_TIM_PWM_Stop(&htim5,TIM_CHANNEL_1);
-  } else {
-    gTBD = gConfig.setTBD;
-    gRPR = gConfig.setPRP;
-    gSD  = gConfig.setSD;
-    gISI = gConfig.setISI;
-    gBI  = gConfig.setBI;
-    gTD  = gConfig.setTD;
-
+#else
     MD1213_OE_Enable(0);
+    stop_single_timer();
+#endif
+  } else {
+    set_timing();
+#if defined(CONFIG_MULTI)
     HAL_TIM_Base_Start_IT(&htim6);
-    HAL_TIM_PWM_Start(&htim5,TIM_CHANNEL_2);
-    HAL_TIM_PWM_Start(&htim5,TIM_CHANNEL_1);
+    GPIO_HV_Enable(0);
+#else    
+    MD1213_OE_Enable(0);
+    start_single_timer();
     GPIO_HV_Enable(1);
-    INFO("\r\ncycle (TD %d/%d)\r\n",(gTD/USEC100),(gConfig.setTD/USEC100));
+#endif
   }
-
-
 }
 
-#define TIM5_BASC_CLK 60000000
+
+#define TIMER_BASC_CLK 60000000
 int8_t setFrequncy(int32_t frq)
 {
-  uint32_t base_clk = TIM5_BASC_CLK/2;
-  uint16_t scaler; 
-
+  uint32_t base_clk = TIMER_BASC_CLK/2;
+  uint16_t scaler;
+  
   scaler = base_clk/frq;
 
   if(scaler < 0xFFFF) {
+#if defined(CONFIG_MULTI)
+    TIM1->PSC = scaler-1;
+    TIM8->PSC = scaler-1;
+#else     
     TIM5->PSC = scaler-1;
+#endif
     return 1;
-  } 
+  }
 
   return 0;
 }
@@ -1521,9 +1830,14 @@ int32_t setTiming(int32_t SD,int32_t ISI,int32_t *pTD)
 
 int32_t setTBDAndDuty(int32_t tbd,int32_t duty)
 {
+  char str[64];
   int32_t rpr;
 
-  rpr = (tbd/duty)*100;
+  //rpr = (tbd/duty)*100;
+  rpr = (int32_t)(tbd*(float)(100/duty));
+  
+  sprintf(str,"RPR %d ",rpr);
+  INFO(str);
 
   return rpr;
 }
@@ -1547,7 +1861,6 @@ void userTask03(void)
         if(setFrequncy(gConfig.setFrequency)) {
           DBG_INFO("\r\nUpdate Frequency\r\n");
           displayEnv(CMD_getFrequency);
-
         }
       }
 
@@ -1636,8 +1949,8 @@ void userTask03(void)
           DBG_ERROR("\r\nsetDigpo Error [TIMEOUT]\r\n");
         }
       }
-
     }
+    
     setSysTimeOut(UPDATE_TIMER,10);
   }
 }
@@ -1650,7 +1963,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   /* NOTE : This function should not be modified, when the callback is needed,
             the HAL_UART_RxCpltCallback can be implemented in the user file.
    */
+#if defined(DEBUG_UART3)
+  if(huart->Instance == USART3 || huart->Instance == USART1)
+#elif defined(DEBUG_UART2)
+  if(huart->Instance == USART2 || huart->Instance == USART1)
+#else
   if(huart->Instance == USART1)
+#endif 
   {
     char  ch = (char)UARTRxBuff[UARTRxBuffIdx];
     switch (ch)
@@ -1661,10 +1980,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       //case 0x0A: //'\n'
        CONFIG_MODE(3000);
        if(UARTRxBuffIdx != 0) {
-         BUFFER_Write(&USART1_Buffer,UARTRxBuff,UARTRxBuffIdx+1); 
+         BUFFER_Write(&USART_Buffer,UARTRxBuff,UARTRxBuffIdx+1); 
          UARTRxBuffIdx = 0;
        } else {
-         BUFFER_Write(&USART1_Buffer,&ch,1); 
+         BUFFER_Write(&USART_Buffer,(uint8_t *)&ch,1); 
        }
        break;
       case 0x08: // '\b'    
@@ -1688,7 +2007,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       UARTRxBuffIdx++;
       break;
     }
-    HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
+    
+#if defined(DEBUG_UART3)
+  HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);
+  HAL_UART_Receive_IT(&huart3,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);
+#elif defined(DEBUG_UART2)
+  HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);
+  HAL_UART_Receive_IT(&huart2,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
+#else
+  HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
+#endif    
   }
 }
 
@@ -1697,28 +2025,110 @@ void HAL_SYSTICK_Callback(void)
   /* NOTE : This function Should not be modified, when the callback is needed,
             the HAL_SYSTICK_Callback could be implemented in the user file
    */
-  static uint8_t tick = 0 ;
-  for(int i = 0; i < MAX_TIMER; i++)
-  {
+  for(int i = 0; i < MAX_TIMER; i++) {
     if(systemTimer[i] > 0)
       systemTimer[i]--;
   }
 
   if(gConfig.timeout > 0) {
     gConfig.timeout--;
-    if(gConfig.timeout == 0) {
+    if(gConfig.timeout == 0)
       gConfig.state = 0;
-    }
   }
-  
-//  DEBUG_EvtHandler();
-//  KeyScan();
-  
-  if(tick++ > 500) {
-    tick = 0;
-  }
-
 }
+
+#if !defined(CONFIG_MULTI)
+static void single_RF_generate(void)
+{
+  static int32_t  preTD = 0;
+  
+  if(gTD[RF_CH0]--) {
+      //BI cycle
+      if((gBI[RF_CH0]--) > 0) {
+        if((gSD[RF_CH0]--) > 0) { 
+          if((gRPR[RF_CH0]--) > 0) { if((gTBD[RF_CH0]--) > 0) MD1213_OE_Enable(1); else  MD1213_OE_Enable(0);} 
+          else                     { gTBD[RF_CH0] = gConfig.setTBD; gRPR[RF_CH0] = gConfig.setPRP; MD1213_OE_Enable(0);}
+        } 
+        else 
+        { 
+          MD1213_OE_Enable(0);
+        }
+      } else {
+        gSD[RF_CH0] = gConfig.setSD;
+        gBI[RF_CH0] = gConfig.setBI;
+        gTBD[RF_CH0] = gConfig.setTBD;
+        gRPR[RF_CH0] = gConfig.setPRP;
+        MD1213_OE_Enable(0);
+        
+        if(preTD != (gTD[RF_CH0]/SEC)) {
+          INFO("1 cycle done (TD %d/%d)\r\n",(gTD[RF_CH0]/SEC),(gConfig.setTD/SEC));
+          preTD = (gTD[RF_CH0]/SEC);
+        }
+      }
+    } else {
+      gTBD[RF_CH0] = -1;
+      gRPR[RF_CH0] = -1;
+      gSD[RF_CH0]  = -1;
+      gISI[RF_CH0] = -1;
+      gBI[RF_CH0]  = -1;
+      gTD[RF_CH0]  = -1;
+
+      if(gConfig.sonication) {
+        gConfig.n_sonication = 0;
+        gConfig.updateEnv |= (1 << CMD_sonication);
+      }
+      MD1213_OE_Enable(0);
+      HAL_TIM_Base_Stop(&htim6);
+    }
+}
+#endif
+
+#if defined(CONFIG_MULTI)
+static void multi_RF_generate(void)
+{
+  static int32_t  preTD = 0;
+  
+ if(gTD[RF_CH1]--) {
+      //BI cycle
+      if((gBI[RF_CH1]--) > 0) {
+        if((gSD[RF_CH1]--) > 0) { 
+          if((gRPR[RF_CH1]--) > 0) { if((gTBD[RF_CH1]--) > 0) start_multi_timer(RF_CH0); else  stop_multi_timer();} 
+          else                     { gTBD[RF_CH1] = gConfig.setTBD; gRPR[RF_CH1] = gConfig.setPRP; stop_multi_timer();}
+        } 
+        else 
+        { 
+          stop_multi_timer();
+        }
+      } else {
+        gSD[RF_CH1] = gConfig.setSD;
+        gBI[RF_CH1] = gConfig.setBI;
+        gTBD[RF_CH1] = gConfig.setTBD;
+        gRPR[RF_CH1] = gConfig.setPRP;
+        stop_multi_timer();
+        
+        if(preTD != (gTD[RF_CH1]/SEC)) {
+          INFO("1 cycle done (TD %d/%d)\r\n",(gTD[RF_CH1]/SEC),(gConfig.setTD/SEC));
+          preTD = (gTD[RF_CH1]/SEC);
+        }
+      }
+    } else {
+      gTBD[RF_CH1] = -1;
+      gRPR[RF_CH1] = -1;
+      gSD [RF_CH1] = -1;
+      gISI[RF_CH1] = -1;
+      gBI [RF_CH1] = -1;
+      gTD [RF_CH1] = -1;
+
+      if(gConfig.sonication) {
+        gConfig.n_sonication = 0;
+        gConfig.updateEnv |= (1 << CMD_sonication);
+      }
+      stop_multi_timer();
+      HAL_TIM_Base_Stop(&htim6);
+    }
+  
+}
+#endif
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -1728,46 +2138,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   static uint16_t tick = 0;
   if(htim->Instance==TIM6)
   {
-    if(gTD--) {
-      if((gBI--) > 0) {
-        if((gSD--) > 0) {
-          
-          if((gRPR--) > 0) {
-            if((gTBD--) > 0) {
-              MD1213_OE_Enable(1);
-            } else {
-              MD1213_OE_Enable(0);
-            }
-          } else {
-            gTBD = gConfig.setTBD;
-            gRPR = gConfig.setPRP;
-          }
-          // gSD = 100;
-          // gBI = 100;
-          // gTD = 100;
-          
-          
-        }
-      } else {
-        gSD = gConfig.setSD;
-        gBI = gConfig.setBI;
-        INFO("1 cycle done (TD %d/%d)\r\n",(gTD/USEC100),(gConfig.setTD/USEC100));
-      }
-    } else {
-      gTBD = -1;
-      gRPR = -1;
-      gSD  = -1;
-      gISI = -1;
-      gBI  = -1;
-      gTD  = -1;
-
-      if(gConfig.sonication) {
-        gConfig.n_sonication = 0;
-        gConfig.updateEnv |= (1 << CMD_sonication);
-      }
-      MD1213_OE_Enable(0);
-      HAL_TIM_Base_Stop(&htim6);
-    }
+#if defined(CONFIG_MULTI)
+    multi_RF_generate();
+#else
+    single_RF_generate();
+#endif
   }
 
   if(htim->Instance == TIM7) {

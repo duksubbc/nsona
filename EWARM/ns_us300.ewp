@@ -226,6 +226,8 @@
                     <name>CCDefines</name>
                     <state>USE_HAL_DRIVER</state>
                     <state>STM32F205xx</state>
+                    <state>DEBUG_UART1</state>
+                    <state>CONFIG_MULTI</state>
                 </option>
                 <option>
                     <name>CCPreprocFile</name>
@@ -375,7 +377,7 @@
                 <option>
                     <name>CCOptStrategy</name>
                     <version>0</version>
-                    <state>1</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>CCOptLevelSlave</name>
@@ -438,7 +440,7 @@
                 <option>
                     <name>CCOptStrategySlave</name>
                     <version>0</version>
-                    <state>1</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>CCGuardCalls</name>
@@ -1083,6 +1085,9 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\stm32f2xx_it.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\voice.c</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\xprintf.c</name>

@@ -37,12 +37,26 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+
+#define MAX_RF_CH       7
+#define RF_CH0          0  
+#define RF_CH1          1
+#define RF_CH2          2
+#define RF_CH3          3
+#define RF_CH4          4
+#define RF_CH5          5
+#define RF_CH6          6
+
+  
 typedef struct _config_t {
   uint8_t    state;
   uint8_t    flag;
   int32_t    timeout;
   int32_t    version;
 
+  
+  uint8_t    configCH;
+  uint8_t    ActiveCH;
   uint32_t   updateEnv;
   int32_t    n_setFrequency;
   int32_t    n_setOutputVoltage;
@@ -53,6 +67,7 @@ typedef struct _config_t {
   int32_t    n_setTD;
 
   int32_t    n_setImpedance;
+  int32_t    n_setDelay[MAX_RF_CH];
   int32_t    n_setAbnormalStopMode;
 
   int32_t    n_setAbnormalStopMaxV;
@@ -73,6 +88,7 @@ typedef struct _config_t {
   int32_t    setTD;
 
   int32_t    setImpedance;
+  int32_t    setDelay[MAX_RF_CH];
   int32_t    setAbnormalStopMode;
 
   int32_t    setAbnormalStopMaxV;
@@ -91,6 +107,31 @@ typedef struct _timer_t {
   int32_t    sonication;
 } Timer_T;
 
+#if 1
+typedef enum _COMMAMD_ID {
+    
+    CMD_setFrequency = 0,
+    CMD_setOutputVoltage,
+    CMD_setTBDAndDuty, 
+    CMD_setTiming,
+    CMD_setImpedance, 
+    CMD_setAbnormalStopMode,
+    CMD_setDelay,
+    CMD_sonication,
+    CMD_setDigipot,
+    CMD_clearError,
+    CMD_getFrequency,
+    CMD_getOutputVoltage,
+    CMD_getTBDAndDuty, 
+    CMD_getTiming,
+    CMD_getImpedance, 
+    CMD_getAbnormalStopMode,
+    CMD_getDelay,
+    CMD_VERSION,
+    CMD_HELP,
+    CMD_unknown
+} COMMAMD_ID;
+#else
 typedef enum _COMMAMD_ID {
     
     CMD_setFrequency = 0,
@@ -99,8 +140,19 @@ typedef enum _COMMAMD_ID {
     CMD_setTiming = 3,
     CMD_setImpedance = 4, 
     CMD_setAbnormalStopMode = 5,
-    CMD_sonication = 6,
-    CMD_setDigipot = 7,
+    
+    
+    CMD_setActiveCH  = 6,
+    CMD_setCurrentCH = 7,
+    
+    CMD_sonication = 8,
+    
+    
+    
+    CMD_setDigipot = 9,
+    
+    
+    
     CMD_clearError = 8,
     CMD_getFrequency = 9,
     CMD_getOutputVoltage = 10,
@@ -108,9 +160,14 @@ typedef enum _COMMAMD_ID {
     CMD_getTiming = 12,
     CMD_getImpedance = 13, 
     CMD_getAbnormalStopMode = 14,
+    
+    
+    
     CMD_VERSION = 15,
+    CMD_HELP    = 16,
     CMD_unknown = 16
 } COMMAMD_ID;
+#endif
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -121,6 +178,11 @@ typedef enum _COMMAMD_ID {
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
+#define AUDIO_CS_LOW()          (AUDIO_CS_GPIO_Port->BSRR = AUDIO_CS_Pin << 16)
+#define AUDIO_CS_HI()           (AUDIO_CS_GPIO_Port->BSRR = AUDIO_CS_Pin)
+
+#define AUDIO_RESET_LOW()       (AUDIO_RESET_GPIO_Port->BSRR = AUDIO_RESET_Pin << 16)
+#define AUDIO_RESET_HI()        (AUDIO_RESET_GPIO_Port->BSRR = AUDIO_RESET_Pin)
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
@@ -130,19 +192,12 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
+extern HAL_StatusTypeDef setDigpo(uint8_t ch , uint8_t val, uint8_t *reg);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 #define EN_HV_Pin GPIO_PIN_13
 #define EN_HV_GPIO_Port GPIOC
-#define RTC_XTALI_Pin GPIO_PIN_14
-#define RTC_XTALI_GPIO_Port GPIOC
-#define RTC_XTALO_Pin GPIO_PIN_15
-#define RTC_XTALO_GPIO_Port GPIOC
-#define CPU_XTALI_Pin GPIO_PIN_0
-#define CPU_XTALI_GPIO_Port GPIOH
-#define CPU_XTALO_Pin GPIO_PIN_1
-#define CPU_XTALO_GPIO_Port GPIOH
 #define EX_RF_1A_Pin GPIO_PIN_0
 #define EX_RF_1A_GPIO_Port GPIOC
 #define SW1_Pin GPIO_PIN_1
@@ -161,10 +216,10 @@ void Error_Handler(void);
 #define STHV748_D_IN2_GPIO_Port GPIOA
 #define STHV748_A_IN2_Pin GPIO_PIN_7
 #define STHV748_A_IN2_GPIO_Port GPIOA
-#define STH748_A_IN3_Pin GPIO_PIN_4
-#define STH748_A_IN3_GPIO_Port GPIOC
-#define STH748_B_IN3_Pin GPIO_PIN_5
-#define STH748_B_IN3_GPIO_Port GPIOC
+#define STHV748_A_IN3_Pin GPIO_PIN_4
+#define STHV748_A_IN3_GPIO_Port GPIOC
+#define STHV748_B_IN3_Pin GPIO_PIN_5
+#define STHV748_B_IN3_GPIO_Port GPIOC
 #define STHV748_B_IN2_Pin GPIO_PIN_0
 #define STHV748_B_IN2_GPIO_Port GPIOB
 #define BATT_V_Pin GPIO_PIN_1
@@ -175,8 +230,8 @@ void Error_Handler(void);
 #define BLE_TX_GPIO_Port GPIOB
 #define BLE_RX_Pin GPIO_PIN_11
 #define BLE_RX_GPIO_Port GPIOB
-#define STH748_C_IN3_Pin GPIO_PIN_12
-#define STH748_C_IN3_GPIO_Port GPIOB
+#define STHV748_C_IN3_Pin GPIO_PIN_12
+#define STHV748_C_IN3_GPIO_Port GPIOB
 #define BLE_CTX_Pin GPIO_PIN_13
 #define BLE_CTX_GPIO_Port GPIOB
 #define BLE_RTS_Pin GPIO_PIN_14
@@ -185,12 +240,12 @@ void Error_Handler(void);
 #define STHV748_C_IN2_GPIO_Port GPIOB
 #define STHV748_D_IN1_Pin GPIO_PIN_6
 #define STHV748_D_IN1_GPIO_Port GPIOC
-#define STH748_D_IN3_Pin GPIO_PIN_7
-#define STH748_D_IN3_GPIO_Port GPIOC
-#define STH748_IN4_Pin GPIO_PIN_8
-#define STH748_IN4_GPIO_Port GPIOC
-#define T_Pin GPIO_PIN_9
-#define T_GPIO_Port GPIOC
+#define STHV748_D_IN3_Pin GPIO_PIN_7
+#define STHV748_D_IN3_GPIO_Port GPIOC
+#define STHV748_IN4_Pin GPIO_PIN_8
+#define STHV748_IN4_GPIO_Port GPIOC
+#define STHV748_THSD_Pin GPIO_PIN_9
+#define STHV748_THSD_GPIO_Port GPIOC
 #define STHV748_A_IN1_Pin GPIO_PIN_8
 #define STHV748_A_IN1_GPIO_Port GPIOA
 #define STHV748_B_IN1_Pin GPIO_PIN_9

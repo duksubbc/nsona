@@ -1229,6 +1229,9 @@
                 <name>$PROJ_DIR$\..\Src\stm32f2xx_it.c</name>
             </file>
             <file>
+                <name>$PROJ_DIR$\..\Src\voice.c</name>
+            </file>
+            <file>
                 <name>$PROJ_DIR$\..\Src\xprintf.c</name>
             </file>
         </group>

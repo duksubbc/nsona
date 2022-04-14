@@ -6,7 +6,7 @@
 #define rbINTERNAL_ERROR			3
 
 #define RX_RING_SIZE                            512
-#define TX_RING_SIZE                            640
+#define TX_RING_SIZE                            1024
 
 struct ringbuffer
 {

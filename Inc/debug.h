@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-uint8_t DEBUG_LL_USARTInit(void *handle);
+uint8_t DEBUG_LL_USARTInit(void *handle,void *handle1);
 uint8_t DEBUG_LL_USARTSend(uint8_t* data, uint16_t count);
 uint8_t DEBUG_EvtHandler(void);
 
