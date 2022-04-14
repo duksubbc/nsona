@@ -74,8 +74,14 @@
 //#define INFO(fmt,...)     xprintf(fmt,"\033[33m"__VA_ARGS__"\033[0m")
 #define INFO_PRINT(fmt,arg)     xprintf(fmt,##arg)
 
+//
+#if 1                          
 #define USEC100  (100)
 #define SEC      (1000*10)
+#else
+#define USEC100  (1000)
+#define SEC      (1000*100)
+#endif                          
                           
 /* USER CODE END PM */
 
@@ -1786,6 +1792,7 @@ void setSonication(int32_t mode)
 #if defined(CONFIG_MULTI)
     HAL_TIM_Base_Start_IT(&htim6);
     GPIO_HV_Enable(0);
+    GPIO_HV_Enable(1);
 #else    
     MD1213_OE_Enable(0);
     start_single_timer();

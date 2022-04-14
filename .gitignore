@@ -5,6 +5,8 @@
 
 
 EWARM/ns_us300
+EWARM/ns_us300_multi
+EWARM/ns_us300_single
 EWARM/settings
 *.o
 *.pbi
@@ -17,6 +19,7 @@ EWARM/settings
 *.out
 *.sim
 *.map
+*.dep
 
 # Node artifact files
 node_modules/
