@@ -29,6 +29,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f2xx_hal.h"
+#include "xprintf.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -37,24 +38,13 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
 #define MAX_RF_CH       7
-#define RF_CH0          0  
-#define RF_CH1          1
-#define RF_CH2          2
-#define RF_CH3          3
-#define RF_CH4          4
-#define RF_CH5          5
-#define RF_CH6          6
 
-  
 typedef struct _config_t {
   uint8_t    state;
   uint8_t    flag;
   int32_t    timeout;
   int32_t    version;
-
-  
   uint8_t    configCH;
   uint8_t    ActiveCH;
   uint32_t   updateEnv;
@@ -65,18 +55,14 @@ typedef struct _config_t {
   int32_t    n_setSD;
   int32_t    n_setISI;
   int32_t    n_setTD;
-
   int32_t    n_setImpedance;
-  int32_t    n_setDelay[MAX_RF_CH];
   int32_t    n_setAbnormalStopMode;
-
   int32_t    n_setAbnormalStopMaxV;
   int32_t    n_setAbnormalStopMaxI;
   int32_t    n_setAbnormalStopMinV;
   int32_t    n_setAbnormalStopMinI;
-
+  int32_t    n_setDelay[MAX_RF_CH];
   int32_t    n_sonication;
-
   int32_t    setFrequency;
   int32_t    setOutputVoltage;
   int32_t    setTBD;
@@ -86,30 +72,23 @@ typedef struct _config_t {
   int32_t    setISI;
   int32_t    setBI;
   int32_t    setTD;
-
   int32_t    setImpedance;
-  int32_t    setDelay[MAX_RF_CH];
   int32_t    setAbnormalStopMode;
-
   int32_t    setAbnormalStopMaxV;
   int32_t    setAbnormalStopMaxI;
   int32_t    setAbnormalStopMinV;
   int32_t    setAbnormalStopMinI;
-
+  int32_t    setDelay[MAX_RF_CH];
   int32_t    sonication;
-  
   uint8_t    digipotCH;
   uint8_t    setDigipot;
-
 } CONFIG_T;
 
 typedef struct _timer_t {
   int32_t    sonication;
 } Timer_T;
 
-#if 1
 typedef enum _COMMAMD_ID {
-    
     CMD_setFrequency = 0,
     CMD_setOutputVoltage,
     CMD_setTBDAndDuty, 
@@ -131,43 +110,7 @@ typedef enum _COMMAMD_ID {
     CMD_HELP,
     CMD_unknown
 } COMMAMD_ID;
-#else
-typedef enum _COMMAMD_ID {
-    
-    CMD_setFrequency = 0,
-    CMD_setOutputVoltage = 1,
-    CMD_setTBDAndDuty = 2, 
-    CMD_setTiming = 3,
-    CMD_setImpedance = 4, 
-    CMD_setAbnormalStopMode = 5,
-    
-    
-    CMD_setActiveCH  = 6,
-    CMD_setCurrentCH = 7,
-    
-    CMD_sonication = 8,
-    
-    
-    
-    CMD_setDigipot = 9,
-    
-    
-    
-    CMD_clearError = 8,
-    CMD_getFrequency = 9,
-    CMD_getOutputVoltage = 10,
-    CMD_getTBDAndDuty = 11, 
-    CMD_getTiming = 12,
-    CMD_getImpedance = 13, 
-    CMD_getAbnormalStopMode = 14,
-    
-    
-    
-    CMD_VERSION = 15,
-    CMD_HELP    = 16,
-    CMD_unknown = 16
-} COMMAMD_ID;
-#endif
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -273,7 +216,79 @@ extern HAL_StatusTypeDef setDigpo(uint8_t ch , uint8_t val, uint8_t *reg);
 #define DEBUG_RX_Pin GPIO_PIN_7
 #define DEBUG_RX_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
+#define _VERSION_     "0.2a"
 
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
+
+#define DBG_PRINT(...)      xprintf(__VA_ARGS__)
+#define DBG_INFO(...)       xprintf("\x1B[32m"__VA_ARGS__"\x1B[0m")
+#define DBG_WARRING(...)    xprintf("\033[33m"__VA_ARGS__"\033[0m")
+#define DBG_ERROR(...)      xprintf("\033[31m"__VA_ARGS__"\033[0m")
+
+#define DBG_INFO_MAG(...)   xprintf("\033[35m"__VA_ARGS__"\033[0m")
+#define DBG_INFO_CYN(...)   xprintf("\033[36m"__VA_ARGS__"\033[0m")
+
+
+#define INFO(fmt, ...)      xprintf("\033[32m");\
+                            xprintf((fmt),##__VA_ARGS__);\
+                            xprintf("\033[0m");
+
+#define WARRING(fmt, ...)   xprintf("\033[33m");\
+                            xprintf((fmt),##__VA_ARGS__);\
+                            xprintf("\033[0m");
+
+#define ERROR(fmt, ...)     xprintf("\033[31m");\
+                            xprintf((fmt),##__VA_ARGS__);\
+                            xprintf("\033[0m");
+                            
+//#define INFO_STR(...)     xprintf("\033[33m"__VA_ARGS__"\033[0m")
+//#define INFO(fmt,...)     xprintf(fmt,"\033[33m"__VA_ARGS__"\033[0m")
+#define INFO_PRINT(fmt,arg) xprintf(fmt,##arg)
+
+
+#define RF_CH0          0  
+#define RF_CH1          1
+#define RF_CH2          2
+#define RF_CH3          3
+#define RF_CH4          4
+#define RF_CH5          5
+#define RF_CH6          6
+
+#define RF_DEF_FREQUENCY    250000
+#define RF_DEF_OUTVOLT      10
+#define RF_DEF_TBD          250000
+#define RF_DEF_DUTY         50
+#define RF_DEF_RPR          1000
+
+#define RF_DEF_SD           5000
+#define RF_DEF_ISI          50000
+#define RF_DEF_BI           55000
+#define RF_DEF_TD           1000000
+
+#define RF_DEF_IMPEDANCE    50
+#define RF_DEF_ABNORMAL_MODE    0
+
+#define RF_DEF_ABNORMAL_MAXV    0
+#define RF_DEF_ABNORMAL_MINV    0
+#define RF_DEF_ABNORMAL_MAXI    0
+#define RF_DEF_ABNORMAL_MINI    0
+
+#define RF_DEF_DELAY_CH0        1
+#define RF_DEF_DELAY_CH1        1
+#define RF_DEF_DELAY_CH2        1
+#define RF_DEF_DELAY_CH3        1
+#define RF_DEF_DELAY_CH4        1
+#define RF_DEF_DELAY_CH5        1
+#define RF_DEF_DELAY_CH6        1
+
+extern uint8_t  console_debug ;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

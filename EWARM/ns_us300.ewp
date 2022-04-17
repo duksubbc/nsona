@@ -2740,7 +2740,7 @@
                 </option>
                 <option>
                     <name>OOCOutputFile</name>
-                    <state>ns_us300_single_$DATE$.hex</state>
+                    <state>$PROJ_FNAME$_$DATE$.hex</state>
                 </option>
                 <option>
                     <name>OOCCommandLineProducer</name>
@@ -3145,6 +3145,12 @@
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\digport.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\hal_nv.c</name>
+            </file>
+            <file>
+                <name>$PROJ_DIR$\..\Src\hal_nv.h</name>
             </file>
             <file>
                 <name>$PROJ_DIR$\..\Src\keyscan.c</name>
