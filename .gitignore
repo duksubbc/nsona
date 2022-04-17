@@ -4,6 +4,7 @@
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
 
+EWARM/.metadata
 EWARM/ns_us300
 EWARM/ns_us300_multi
 EWARM/ns_us300_single
