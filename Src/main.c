@@ -32,6 +32,9 @@
 #include "xprintf.h"
 #include "soft_timer.h"
 #include "keyscan.h"
+
+#include "task1.h"
+#include "task2.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,8 +49,8 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
              
-#define USEC100  (100)
-#define SEC      (1000*10)
+//#define USEC100  (100)
+//#define SEC      (1000*10)
                       
                           
 /* USER CODE END PM */
@@ -76,9 +79,9 @@ UART_HandleTypeDef huart3;
 CONFIG_T gConfig;
 uint8_t  UARTRxBuffIdx;
 uint8_t  UARTRxBuff[128];
-char     Received[256];
-BUFFER_t USART_Buffer;
-uint8_t  USARTBuffer[RX_RING_SIZE];
+// char     Received[256];
+// BUFFER_t USART_Buffer;
+// uint8_t  USARTBuffer[RX_RING_SIZE];
 
 uint16_t tim3_ch1_duty;
 
@@ -104,11 +107,6 @@ static void MX_TIM7_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
-void InituserTask01(void);
-void userTask01(void);
-
-void InituserTask02(void);
-void userTask02(void);
 
 void InituserTask03(void);
 void userTask03(void);
@@ -314,8 +312,8 @@ int main(void)
   
   Load_Env(&gConfig);
   
-  InituserTask01();
-  InituserTask02();
+  InituserTask01(&gConfig);
+  InituserTask02(&gConfig);
   InituserTask03();
   
   while (1)
@@ -323,8 +321,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    userTask01();
-    userTask02();
+    userTask01(&gConfig);
+    userTask02(&gConfig);
     userTask03();
   }
   /* USER CODE END 3 */
@@ -1110,6 +1108,7 @@ void setPWMDuty(uint16_t duty)
   
 }
 
+#if 0
 void InituserTask01(void)
 {
   tim3_ch1_duty = 0;
@@ -1442,7 +1441,7 @@ void userTask02(void)
           }
         }
         
-        if(strstr(Received,"nsbt") != NULL) {
+        if((Received,"nsbt") != NULL) {
 
           /* Get token */
           ptr = strtok(Received," ");
@@ -1620,6 +1619,7 @@ void userTask02(void)
   }
   /* USER CODE END StartTask02 */
 }
+#endif
 
 int32_t gTBD[MAX_RF_CH];
 int32_t gRPR[MAX_RF_CH];
