@@ -17,6 +17,9 @@
   *
   ******************************************************************************
   */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -88,28 +91,6 @@ typedef struct _timer_t {
   int32_t    sonication;
 } Timer_T;
 
-typedef enum _COMMAMD_ID {
-    CMD_setFrequency = 0,
-    CMD_setOutputVoltage,
-    CMD_setTBDAndDuty, 
-    CMD_setTiming,
-    CMD_setImpedance, 
-    CMD_setAbnormalStopMode,
-    CMD_setDelay,
-    CMD_sonication,
-    CMD_setDigipot,
-    CMD_clearError,
-    CMD_getFrequency,
-    CMD_getOutputVoltage,
-    CMD_getTBDAndDuty, 
-    CMD_getTiming,
-    CMD_getImpedance, 
-    CMD_getAbnormalStopMode,
-    CMD_getDelay,
-    CMD_VERSION,
-    CMD_HELP,
-    CMD_unknown
-} COMMAMD_ID;
 
 /* USER CODE END ET */
 
@@ -136,6 +117,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN EFP */
 
 extern HAL_StatusTypeDef setDigpo(uint8_t ch , uint8_t val, uint8_t *reg);
+extern void LED1_ON(uint8_t on);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -287,6 +269,9 @@ extern HAL_StatusTypeDef setDigpo(uint8_t ch , uint8_t val, uint8_t *reg);
 #define RF_DEF_DELAY_CH4        1
 #define RF_DEF_DELAY_CH5        1
 #define RF_DEF_DELAY_CH6        1
+                            
+#define USEC100  (100)
+#define SEC      (1000*10)                            
 
 extern uint8_t  console_debug ;
 /* USER CODE END Private defines */

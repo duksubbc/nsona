@@ -24,6 +24,9 @@ EWARM/ns_us300.dep
 *.map
 *.dep
 
+#vscode configure files
+.vscode/
+
 # Node artifact files
 node_modules/
 dist/
