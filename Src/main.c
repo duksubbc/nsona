@@ -288,6 +288,23 @@ int main(void)
   HAL_Delay(100);
   AUDIO_RESET_HI();
   
+  
+#if defined(CONFIG_MULTI)
+  {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    /*Configure GPIO pin Output Level */
+    HAL_GPIO_WritePin(GPIOB, BATT_V_Pin, GPIO_PIN_RESET);
+
+    /*Configure GPIO pins : BATT_V_Pin  */
+    GPIO_InitStruct.Pin = BATT_V_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  }
+#endif
+  
+  
   GPIO_HV_Enable(DISABLE);
   
 #if defined(CONFIG_MULTI)  
@@ -1844,6 +1861,9 @@ void userTask03(void)
         gConfig.updateEnv &= ~(1 << CMD_setOutputVoltage);
         gConfig.setOutputVoltage = gConfig.n_setOutputVoltage;
         DBG_INFO("\r\nUpdate setOutputVoltage\r\n");
+
+        setPWMDuty(gConfig.setOutputVoltage);
+        
         displayEnv(CMD_getOutputVoltage);
       }
 
