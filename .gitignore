@@ -10,7 +10,7 @@ EWARM/ns_us300_multi
 EWARM/ns_us300_single
 EWARM/settings
 EWARM/ns_us300.dep
-
+.vscode/
 *.o
 *.pbi
 *.pdb
