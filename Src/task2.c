@@ -29,7 +29,6 @@ uint8_t  USARTBuffer[RX_RING_SIZE];
 static int32_t ParseNumber(char* ptr, uint8_t* cnt);
 static void checkCmdArgs(COMMAMD_ID id, uint8_t num);
 static void cmd_hemp(void);
-static void displayEnv(COMMAMD_ID id);
 
 ////////////////////////////////////////////////////////////
 
@@ -37,13 +36,13 @@ static char     recevied[256];
 
 
 ////////////////////////////////////////////////////////////
-void InituserTask02(void)
+void InituserTask02(CONFIG_T *sysconf)
 {
   setSysTimeOut(DEBUG_TIMER,1);
   HAL_TIM_Base_Start_IT(&htim7);
 }
 
-void userTask02(void)
+void userTask02(CONFIG_T *sysconf)
 {
   /* USER CODE BEGIN StartTask02 */
   /* Infinite loop */
@@ -51,7 +50,7 @@ void userTask02(void)
   {
     uint16_t res , i ;
     COMMAMD_ID id;
-    const char *text = "\r\nNS-US3000 $ ";
+    const char *text = "\r\nNS-US300 $ ";
   
     if(gConfig.state != 0)
     {
