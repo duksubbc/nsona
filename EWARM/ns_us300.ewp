@@ -652,11 +652,11 @@
                 </option>
                 <option>
                     <name>OCOutputOverride</name>
-                    <state>1</state>
+                    <state>0</state>
                 </option>
                 <option>
                     <name>OOCOutputFile</name>
-                    <state>ns_us300_$DATE$.hex</state>
+                    <state>ns_us300.hex</state>
                 </option>
                 <option>
                     <name>OOCCommandLineProducer</name>
@@ -1330,7 +1330,7 @@
                 <option>
                     <name>CCAllowList</name>
                     <version>1</version>
-                    <state>00000000</state>
+                    <state>10010100</state>
                 </option>
                 <option>
                     <name>CCDebugInfo</name>
@@ -1414,7 +1414,7 @@
                 </option>
                 <option>
                     <name>CCOptLevel</name>
-                    <state>1</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>CCOptStrategy</name>
@@ -1423,7 +1423,7 @@
                 </option>
                 <option>
                     <name>CCOptLevelSlave</name>
-                    <state>1</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>CompilerMisraRules98</name>
@@ -1490,11 +1490,11 @@
                 </option>
                 <option>
                     <name>CCEncSource</name>
-                    <state>0</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>CCEncOutput</name>
-                    <state>0</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>CCEncOutputBom</name>
@@ -1502,7 +1502,7 @@
                 </option>
                 <option>
                     <name>CCEncInput</name>
-                    <state>0</state>
+                    <state>1</state>
                 </option>
                 <option>
                     <name>IccExceptions2</name>
@@ -1698,7 +1698,7 @@
                 </option>
                 <option>
                     <name>OOCOutputFile</name>
-                    <state>ns_us300_multi_$DATE$.hex</state>
+                    <state>ns_us300.hex</state>
                 </option>
                 <option>
                     <name>OOCCommandLineProducer</name>
@@ -2736,11 +2736,11 @@
                 </option>
                 <option>
                     <name>OCOutputOverride</name>
-                    <state>1</state>
+                    <state>0</state>
                 </option>
                 <option>
                     <name>OOCOutputFile</name>
-                    <state>$PROJ_FNAME$_$DATE$.hex</state>
+                    <state>ns_us300.hex</state>
                 </option>
                 <option>
                     <name>OOCCommandLineProducer</name>

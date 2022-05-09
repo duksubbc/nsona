@@ -92,7 +92,6 @@ NV_ID_INVALID = 0xFFFF,
 #define NV_ID_TD_LEN			4
 #define NV_ID_IMPEDANCE_LEN		4
 #define NV_ID_ABNORMAL_STOPMODE_LEN	4
-
 #define NV_ID_ABNORMAL_STOPMAX_V_LEN	4
 #define NV_ID_ABNORMAL_STOPMIN_V_LEN	4
 #define NV_ID_ABNORMAL_STOPMAX_I_LEN	4
@@ -152,22 +151,23 @@ extern int NvSerialNoRead(uint8_t *buf);
 
 extern void NvReadAll(void *env);
 
-#if 0
-extern void nv_write_setFrequency(void);
-extern void nv_write_setOutputVoltage(void);
+#if 1
+extern void nv_write_setFrequency(int32_t);
+extern void nv_write_setOutputVoltage(int32_t);
 
-extern void nv_write_setDuty(void);
-extern void nv_write_setPRP(void);
-extern void nv_write_setSD(void);
+extern void nv_write_setTBD(int32_t);
+extern void nv_write_setDuty(int32_t);
+extern void nv_write_setPRP(int32_t);
+extern void nv_write_setSD(int32_t);
 
-extern void nv_write_setISI(void);
-extern void nv_write_setBI(void);
+extern void nv_write_setISI(int32_t);
+extern void nv_write_setBI(int32_t);
 
-extern void nv_write_setTD(void);
-extern void nv_write_setImpedance(void);
-extern void nv_write_setAbnormalStopMode(void);
+extern void nv_write_setTD(int32_t);
+extern void nv_write_setImpedance(int32_t);
+extern void nv_write_setAbnormalStopMode(int32_t);
 
-extern void nv_write_setDelay(void);
+extern void nv_write_setDelay(int32_t);
 #endif
 
 #endif

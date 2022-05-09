@@ -1,3 +1,4 @@
+/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
@@ -15,9 +16,6 @@
   *
   ******************************************************************************
   */
-    
-#include <stdio.h>    
-#include <ctype.h>    
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -86,6 +84,10 @@ uint16_t tim3_ch1_duty;
 
 uint8_t  console_debug = 1;
 
+
+
+ uint8_t  RF_Start = 0;
+ uint16_t RF_PSC;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -107,8 +109,12 @@ static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 
-void InituserTask03(void);
-void userTask03(void);
+int32_t setTBDAndDuty(int32_t tbd,int32_t duty);
+int32_t setTiming(int32_t SD,int32_t ISI,int32_t *pTD);
+int32_t calcurateSD(int32_t sd,int32_t prp);
+
+void InituserTask03(CONFIG_T *sysconf);
+void userTask03(CONFIG_T *sysconf);
 
 
 extern void dig_port(uint16_t val);
@@ -170,19 +176,24 @@ void Load_Env(CONFIG_T *env)
 {
   if(env != NULL)
   {
-    env->setFrequency = 250000;
-    env->setOutputVoltage = 50;
 
-    env->setTBD  =  500; // 25.0ms  range 0.1 ~ 50ms
-    env->setDuty =  50;   // 50 %    range 1 ~ 100 %
-    env->setPRP  = (int32_t)(100.0/env->setDuty)*(env->setTBD);
+    // NvCheckAndReset();
+    // NvReadAll(env);
 
-    env->setSD  =  env->setPRP*5;      // ms
-    env->setISI =  env->setSD*10;       // s
-    env->setBI  = env->setSD + env->setISI;    // s 
-    env->setTD  = 100*SEC;     // s 
+     env->setFrequency = 250000;
+     env->setOutputVoltage = 50;
 
-    env->setImpedance = 50;
+     // 1 = 4us
+     env->setTBD  =  from100uSEC(1);   // range 0.1 ~ 50ms  (100 ~ 50000)
+     env->setDuty =  50;   //  range   1 ~ 100 %
+     env->setPRP  = setTBDAndDuty(env->setTBD,env->setDuty);
+
+     env->setSD  =  env->setPRP*5;      // range 1 ~ 500ms  (1000 ~ 500000)
+     env->setISI =  env->setSD;       // s
+     env->setBI  = env->setSD + env->setISI;    // s 
+     env->setTD  = 10*SEC;     // s 
+
+     env->setImpedance = 50;
     
     
     env->setDelay[RF_CH0] = 0*USEC100;
@@ -222,7 +233,6 @@ void indro_message(void)
   DBG_INFO("\r\nFW  Version %s\r\n",_VERSION_);
   DBG_INFO_MAG("NEUROSONA Co., Ltd. ");
   DBG_INFO_CYN("www.neurosona.com\r\n");
-  DBG_PRINT("\r\nNS-US300 $");
 }
 /* USER CODE END 0 */
 
@@ -326,7 +336,7 @@ int main(void)
   
   InituserTask01(&gConfig);
   InituserTask02(&gConfig);
-  InituserTask03();
+  InituserTask03(&gConfig);
   
   while (1)
   {
@@ -335,7 +345,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
     userTask01(&gConfig);
     userTask02(&gConfig);
-    userTask03();
+    userTask03(&gConfig);
   }
   /* USER CODE END 3 */
 }
@@ -560,9 +570,9 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 120;
+  htim1.Init.Prescaler = 120-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 2-1;
+  htim1.Init.Period = 4-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -586,7 +596,7 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 1;
+  sConfigOC.Pulse = 2;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -766,9 +776,9 @@ static void MX_TIM6_Init(void)
 
   /* USER CODE END TIM6_Init 1 */
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 59;
+  htim6.Init.Prescaler = 25000-1;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 100-1;
+  htim6.Init.Period = 240-1;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -845,9 +855,9 @@ static void MX_TIM8_Init(void)
 
   /* USER CODE END TIM8_Init 1 */
   htim8.Instance = TIM8;
-  htim8.Init.Prescaler = 120;
+  htim8.Init.Prescaler = 120-1;
   htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim8.Init.Period = 2-1;
+  htim8.Init.Period = 4-1;
   htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim8.Init.RepetitionCounter = 0;
   htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -871,7 +881,7 @@ static void MX_TIM8_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 1;
+  sConfigOC.Pulse = 2;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -1121,7 +1131,7 @@ void setPWMDuty(uint16_t duty)
 }
 
 int32_t gTBD[MAX_RF_CH];
-int32_t gRPR[MAX_RF_CH];
+int32_t gPRP[MAX_RF_CH];
 int32_t gSD[MAX_RF_CH];
 int32_t gISI[MAX_RF_CH];
 int32_t gBI[MAX_RF_CH];
@@ -1134,7 +1144,7 @@ static void init_timing(void)
      
   for(i = RF_CH0 ; i < MAX_RF_CH ; i++) {
     gTBD[i] = -1;
-    gRPR[i] = -1;
+    gPRP[i] = -1;
     gSD[i]  = -1;
     gISI[i] = -1;
     gBI[i]  = -1;
@@ -1156,14 +1166,14 @@ static void set_timing(void)
   int i;
       
 //    gTBD = gConfig.setTBD;
-//    gRPR = gConfig.setPRP;
+//    gPRP = gConfig.setPRP;
 //    gSD  = gConfig.setSD;
 //    gISI = gConfig.setISI;
 //    gBI  = gConfig.setBI;
 //    gTD  = gConfig.setTD;
   for(i = RF_CH0 ; i < MAX_RF_CH ; i++) {
     gTBD[i] = gConfig.setTBD;
-    gRPR[i] = gConfig.setPRP;
+    gPRP[i] = gConfig.setPRP;
     gSD[i]  = gConfig.setSD;
     gISI[i] = gConfig.setISI;
     gBI[i]  = gConfig.setBI;
@@ -1248,10 +1258,16 @@ void setSonication(int32_t mode)
 {
   if(mode  == 0) {
     init_timing();
-    STHV748_THSD_Enable(DISABLE);
+    
     GPIO_HV_Enable(0);
 #if defined(CONFIG_MULTI)
+    STHV748_THSD_Enable(DISABLE);
+    stop_multi_timer();
     HAL_TIM_Base_Stop(&htim6);
+    TIM6->PSC = RF_PSC;
+    RF_Start = 0;
+    //HAL_TIM_Base_Start(&htim3);
+    //HAL_TIM_Base_Start(&htim7);
 #else
     MD1213_OE_Enable(0);
     stop_single_timer();
@@ -1259,10 +1275,11 @@ void setSonication(int32_t mode)
   } else {
     set_timing();
 #if defined(CONFIG_MULTI)
-    HAL_TIM_Base_Start_IT(&htim6);
-    GPIO_HV_Enable(0);
+    start_multi_timer(RF_CH0);
     GPIO_HV_Enable(1);
-    STHV748_THSD_Enable(ENABLE);
+    // STHV748_THSD_Enable(DISABLE);
+    // STHV748_THSD_Enable(ENABLE);
+    HAL_TIM_Base_Start_IT(&htim6);
 #else    
     MD1213_OE_Enable(0);
     start_single_timer();
@@ -1293,6 +1310,15 @@ int8_t setFrequncy(int32_t frq)
   return 0;
 }
 
+
+int32_t calcurateSD(int32_t sd,int32_t prp)
+{
+  int32_t new;
+  if(prp == 0) return 0;
+  new = (sd/prp)*prp;
+  return new;
+}
+
 int32_t setTiming(int32_t SD,int32_t ISI,int32_t *pTD)
 {
   int32_t bi ,td;
@@ -1308,124 +1334,146 @@ int32_t setTiming(int32_t SD,int32_t ISI,int32_t *pTD)
 int32_t setTBDAndDuty(int32_t tbd,int32_t duty)
 {
   char str[64];
-  int32_t rpr;
+  int32_t PRP;
 
-  // duty는 0 ~ 100 의 값을 가질 수 있음
-  // tbd 는 0 의 값을 가질수 있음
+  // duty?�� 1 ~ 100 ?�� 값을 �??�?? ?�� ?��?��
+  // tbd ?�� 0 ?�� 값을 �??질수 ?��?��
 
-  //case 1 : tbd == 0 일경우 rpr 도 0 으로 설정
-  //case 2 : duty가 0 일 경우 tbd 가 0 과 동일 하게 처리
-  if(tbd == 0 || duty == 0) {
-    rpr = 0;
-    return (rpr);
+  //case 1 : tbd == 0 ?��경우 rpr ?�� 0 ?���?? ?��?��
+  //case 2 : duty�?? 0 ?�� 경우 tbd �?? 0 �?? ?��?�� ?���?? 처리
+  if(tbd == 0) {
+    PRP = 0;
+    return (PRP);
   }
 
-  //case 3:  duty가 100 일 rpr 의 값은 ??
+  //case 3:  duty�?? 100 ?�� rpr ?�� 값�? ??
 
   // rpr = (tbd/duty)*100;
-  rpr = (int32_t)(tbd*(float)(100/duty));
-  
-  sprintf(str,"RPR %d ",rpr);
+  // PRP = (int32_t)(tbd*(float)(100/duty));
+  PRP = (int32_t)(tbd*(100/(float)duty));
+  sprintf(str,"\r\nTBD %d, Duty %d, PRP %d(%0.1f)\r\n",tbd,duty, PRP, tbd*(100/(float)duty));
   INFO(str);
-
-  return rpr;
+  return PRP;
 }
 
-void InituserTask03(void)
+void InituserTask03(CONFIG_T *sysconf)
 {
   setSysTimeOut(UPDATE_TIMER,1);
-
 }
 
-void userTask03(void)
+void userTask03(CONFIG_T *sysconf)
 {
   if(getSysTimeOut(UPDATE_TIMER) == 0)
   {
-    if(gConfig.updateEnv != 0)
+    if(sysconf->updateEnv != 0)
     {
-      if(gConfig.updateEnv & (1 << CMD_setFrequency)) {
-        gConfig.updateEnv &= ~(1 << CMD_setFrequency);
-        gConfig.setFrequency = gConfig.n_setFrequency;
+      if(sysconf->updateEnv & (1 << CMD_setFrequency)) {
+        sysconf->updateEnv &= ~(1 << CMD_setFrequency);
+        sysconf->setFrequency = sysconf->n_setFrequency;
 
-        if(setFrequncy(gConfig.setFrequency)) {
+        if(setFrequncy(sysconf->setFrequency)) {
+
+          nv_write_setFrequency(sysconf->setFrequency);
           DBG_INFO("\r\nUpdate Frequency\r\n");
-          displayEnv(CMD_getFrequency);
+          displayEnv(sysconf,CMD_getFrequency);
         }
       }
 
-      if(gConfig.updateEnv & (1 << CMD_setOutputVoltage)) {
-        gConfig.updateEnv &= ~(1 << CMD_setOutputVoltage);
-        gConfig.setOutputVoltage = gConfig.n_setOutputVoltage;
+      if(sysconf->updateEnv & (1 << CMD_setOutputVoltage)) {
+        sysconf->updateEnv &= ~(1 << CMD_setOutputVoltage);
+        sysconf->setOutputVoltage = sysconf->n_setOutputVoltage;
+        nv_write_setOutputVoltage(sysconf->setOutputVoltage);
         DBG_INFO("\r\nUpdate setOutputVoltage\r\n");
-        displayEnv(CMD_getOutputVoltage);
+        displayEnv(sysconf,CMD_getOutputVoltage);
       }
 
-      if(gConfig.updateEnv & (1 << CMD_setTBDAndDuty)) {
-        gConfig.updateEnv &= ~(1 << CMD_setTBDAndDuty);
-        gConfig.setTBD = gConfig.n_setTBD;
-        gConfig.setDuty = gConfig.n_setDuty;
+      if(sysconf->updateEnv & (1 << CMD_setTBDAndDuty)) {
+        sysconf->updateEnv &= ~(1 << CMD_setTBDAndDuty);
+        sysconf->setTBD  = from100uSEC(sysconf->n_setTBD);
+        sysconf->setDuty = sysconf->n_setDuty;
 
-        gConfig.setPRP = setTBDAndDuty(gConfig.setTBD,gConfig.setDuty);
+        sysconf->setPRP = setTBDAndDuty(sysconf->setTBD,sysconf->setDuty);
+
+        nv_write_setTBD(sysconf->setTBD);
+        nv_write_setDuty(sysconf->setDuty);
+        nv_write_setPRP(sysconf->setPRP);
 
         DBG_INFO("\r\nUpdate setTBDAndDuty\r\n");
-        displayEnv(CMD_getTBDAndDuty);
+        displayEnv(sysconf,CMD_getTBDAndDuty);
       }
 
-      if(gConfig.updateEnv & (1 << CMD_setTiming)) {
-        gConfig.updateEnv &= ~(1 << CMD_setTiming);
+      if(sysconf->updateEnv & (1 << CMD_setTiming)) {
+        int32_t a,b,c;
+        sysconf->updateEnv &= ~(1 << CMD_setTiming);
 
-        gConfig.setSD = gConfig.n_setSD;
-        gConfig.setISI = gConfig.n_setISI;
-        gConfig.setTD = gConfig.n_setTD;
+        sysconf->setSD  = from1mSEC(sysconf->n_setSD);
+        sysconf->setISI = from1sSEC(sysconf->n_setISI);
+        sysconf->setTD  = from1sSEC(sysconf->n_setTD);
 
-        gConfig.setBI = setTiming(gConfig.setSD,gConfig.setISI,&gConfig.setTD);
+        sysconf->setBI = setTiming(sysconf->setSD,sysconf->setISI,&sysconf->setTD);
+  
+        a = calcurateSD(sysconf->setSD,sysconf->setPRP);
+
+        b = sysconf->setSD - a;
+
+        sysconf->setISI += b;
+        sysconf->setSD   = a; 
+
+
+        nv_write_setSD(sysconf->setSD);
+        nv_write_setISI(sysconf->setISI);
+        nv_write_setBI(sysconf->setBI);
+        nv_write_setTD(sysconf->setTD);
 
         DBG_INFO("\r\nUpdate setTiming\r\n");
-        displayEnv(CMD_getTiming);
+        displayEnv(sysconf,CMD_getTiming);
 
       }
 
-      if(gConfig.updateEnv & (1 << CMD_setImpedance)) {
-        gConfig.updateEnv &= ~(1 << CMD_setImpedance);
+      if(sysconf->updateEnv & (1 << CMD_setImpedance)) {
+        sysconf->updateEnv &= ~(1 << CMD_setImpedance);
 
-        gConfig.setImpedance = gConfig.n_setImpedance;
+        sysconf->setImpedance = sysconf->n_setImpedance;
+        nv_write_setImpedance(sysconf->setImpedance);
 
         DBG_INFO("\r\nUpdate setImpedance\r\n");
-        displayEnv(CMD_getImpedance);
+        displayEnv(sysconf,CMD_getImpedance);
       }
 
-      if(gConfig.updateEnv & (1 << CMD_setAbnormalStopMode)) {
-        gConfig.updateEnv &= ~(1 << CMD_setAbnormalStopMode);
+      if(sysconf->updateEnv & (1 << CMD_setAbnormalStopMode)) {
+        sysconf->updateEnv &= ~(1 << CMD_setAbnormalStopMode);
 
-        gConfig.setAbnormalStopMode = gConfig.n_setAbnormalStopMode;
-        gConfig.setAbnormalStopMaxV = gConfig.n_setAbnormalStopMaxV;
-        gConfig.setAbnormalStopMaxI = gConfig.n_setAbnormalStopMaxI;
-        gConfig.setAbnormalStopMinV = gConfig.n_setAbnormalStopMinV;
-        gConfig.setAbnormalStopMinI = gConfig.n_setAbnormalStopMinI;
+        sysconf->setAbnormalStopMode = sysconf->n_setAbnormalStopMode;
+        sysconf->setAbnormalStopMaxV = sysconf->n_setAbnormalStopMaxV;
+        sysconf->setAbnormalStopMaxI = sysconf->n_setAbnormalStopMaxI;
+        sysconf->setAbnormalStopMinV = sysconf->n_setAbnormalStopMinV;
+        sysconf->setAbnormalStopMinI = sysconf->n_setAbnormalStopMinI;
+
+        nv_write_setAbnormalStopMode(sysconf->setAbnormalStopMode);
 
         DBG_INFO("\r\nUpdate setAbnormalStopMode\r\n");
-        displayEnv(CMD_getAbnormalStopMode);
+        displayEnv(sysconf,CMD_getAbnormalStopMode);
       }
 
-      if(gConfig.updateEnv & (1 << CMD_sonication)) {
-        gConfig.updateEnv &= ~(1 << CMD_sonication);
-        gConfig.sonication = gConfig.n_sonication;
+      if(sysconf->updateEnv & (1 << CMD_sonication)) {
+        sysconf->updateEnv &= ~(1 << CMD_sonication);
+        sysconf->sonication = sysconf->n_sonication;
         DBG_INFO("\r\nUpdate sonication\r\n");
-        INFO("\r\nsonication [%s]\r\n",gConfig.sonication == 1? "start":"stop");
-        setSonication(gConfig.sonication);
+        INFO("\r\nsonication [%s]\r\n",sysconf->sonication == 1? "start":"stop");
+        setSonication(sysconf->sonication);
       }
       
-      if(gConfig.updateEnv & (1 << CMD_setDigipot)) {
+      if(sysconf->updateEnv & (1 << CMD_setDigipot)) {
         uint8_t val = 0;
         HAL_StatusTypeDef ret;
-        gConfig.updateEnv &= ~(1 << CMD_setDigipot);
+        sysconf->updateEnv &= ~(1 << CMD_setDigipot);
         
-        ret = setDigpo(gConfig.digipotCH,gConfig.setDigipot,&val);
+        ret = setDigpo(sysconf->digipotCH,sysconf->setDigipot,&val);
         
         if(ret == HAL_OK)
         {
           DBG_INFO("\r\nUpdate Digital Potentiometer \r\n");
-          INFO("\r\nsetDigpo %d[%d]\r\n",gConfig.setDigipot,val);
+          INFO("\r\nsetDigpo %d[%d]\r\n",sysconf->setDigipot,val);
         }
         else if(ret == HAL_ERROR)
         {
@@ -1514,6 +1562,8 @@ void HAL_SYSTICK_Callback(void)
   /* NOTE : This function Should not be modified, when the callback is needed,
             the HAL_SYSTICK_Callback could be implemented in the user file
    */
+  static uint16_t tick = 0;
+
   for(int i = 0; i < MAX_TIMER; i++) {
     if(systemTimer[i] > 0)
       systemTimer[i]--;
@@ -1523,6 +1573,14 @@ void HAL_SYSTICK_Callback(void)
     gConfig.timeout--;
     if(gConfig.timeout == 0)
       gConfig.state = 0;
+  }
+
+
+  if(tick++ > 500)
+  {
+    tick = 0;
+    HAL_GPIO_TogglePin(LED2_GPIO_Port,LED2_Pin);
+    
   }
 }
 
@@ -1535,28 +1593,37 @@ static void single_RF_generate(void)
       //BI cycle
       if((gBI[RF_CH0]--) > 0) {
         if((gSD[RF_CH0]--) > 0) { 
-          if((gRPR[RF_CH0]--) > 0) { if((gTBD[RF_CH0]--) > 0) MD1213_OE_Enable(1); else  MD1213_OE_Enable(0);} 
-          else                     { gTBD[RF_CH0] = gConfig.setTBD; gRPR[RF_CH0] = gConfig.setPRP; MD1213_OE_Enable(0);}
+          if((gPRP[RF_CH0]--) > 0) 
+          { 
+            if((gTBD[RF_CH0]--) > 0)
+              MD1213_OE_GPIO_Port->BSRR  = MD1213_OE_Pin;
+              //MD1213_OE_Enable(1); 
+            else  
+              MD1213_OE_GPIO_Port->BSRR = (uint32_t)MD1213_OE_Pin << 16U;
+              //MD1213_OE_Enable(0);
+
+            if(gPRP[RF_CH0] == 0) {
+               gTBD[RF_CH0] = gConfig.setTBD; 
+               gPRP[RF_CH0] = gConfig.setPRP;
+             }  
+          } 
         } 
         else 
         { 
-          MD1213_OE_Enable(0);
+          MD1213_OE_GPIO_Port->BSRR = (uint32_t)MD1213_OE_Pin << 16U;
+          //MD1213_OE_Enable(0);
         }
-      } else {
-        gSD[RF_CH0] = gConfig.setSD;
-        gBI[RF_CH0] = gConfig.setBI;
-        gTBD[RF_CH0] = gConfig.setTBD;
-        gRPR[RF_CH0] = gConfig.setPRP;
-        MD1213_OE_Enable(0);
-        
-        if(preTD != (gTD[RF_CH0]/SEC)) {
-          INFO("1 cycle done (TD %d/%d)\r\n",(gTD[RF_CH0]/SEC),(gConfig.setTD/SEC));
-          preTD = (gTD[RF_CH0]/SEC);
+
+        if(gBI[RF_CH0] == 0) {
+          gSD[RF_CH0] = gConfig.setSD;
+          gBI[RF_CH0] = gConfig.setBI;
+          gTBD[RF_CH0] = gConfig.setTBD;
+          gPRP[RF_CH0] = gConfig.setPRP;
         }
       }
     } else {
       gTBD[RF_CH0] = -1;
-      gRPR[RF_CH0] = -1;
+      gPRP[RF_CH0] = -1;
       gSD[RF_CH0]  = -1;
       gISI[RF_CH0] = -1;
       gBI[RF_CH0]  = -1;
@@ -1576,33 +1643,43 @@ static void single_RF_generate(void)
 static void multi_RF_generate(void)
 {
   static int32_t  preTD = 0;
-  
- if(gTD[RF_CH1]--) {
+
+   if(gTD[RF_CH1]--) {
       //BI cycle
       if((gBI[RF_CH1]--) > 0) {
         if((gSD[RF_CH1]--) > 0) { 
-          if((gRPR[RF_CH1]--) > 0) { if((gTBD[RF_CH1]--) > 0) start_multi_timer(RF_CH0); else  stop_multi_timer();} 
-          else                     { gTBD[RF_CH1] = gConfig.setTBD; gRPR[RF_CH1] = gConfig.setPRP; stop_multi_timer();}
+          if((gPRP[RF_CH1]--) > 0) {
+             if((gTBD[RF_CH1]--) > 0) {
+              STHV748_THSD_GPIO_Port->BSRR  = STHV748_THSD_Pin;
+              //start_multi_timer(RF_CH0);
+             } else {
+              STHV748_THSD_GPIO_Port->BSRR = (uint32_t)STHV748_THSD_Pin << 16U;
+              //stop_multi_timer();
+             }
+
+             //  
+             if(gPRP[RF_CH1] == 0) {
+               gTBD[RF_CH1] = gConfig.setTBD; 
+               gPRP[RF_CH1] = gConfig.setPRP;
+             }
+          } 
         } 
         else 
-        { 
-          stop_multi_timer();
+        {
+          STHV748_THSD_GPIO_Port->BSRR = (uint32_t)STHV748_THSD_Pin << 16U;
+          //stop_multi_timer();
         }
-      } else {
-        gSD[RF_CH1] = gConfig.setSD;
-        gBI[RF_CH1] = gConfig.setBI;
-        gTBD[RF_CH1] = gConfig.setTBD;
-        gRPR[RF_CH1] = gConfig.setPRP;
-        stop_multi_timer();
-        
-        if(preTD != (gTD[RF_CH1]/SEC)) {
-          INFO("1 cycle done (TD %d/%d)\r\n",(gTD[RF_CH1]/SEC),(gConfig.setTD/SEC));
-          preTD = (gTD[RF_CH1]/SEC);
+
+        if(gBI[RF_CH1] == 0) {
+          gSD[RF_CH1] = gConfig.setSD;
+          gBI[RF_CH1] = gConfig.setBI;
+          gTBD[RF_CH1] = gConfig.setTBD;
+          gPRP[RF_CH1] = gConfig.setPRP;
         }
       }
     } else {
       gTBD[RF_CH1] = -1;
-      gRPR[RF_CH1] = -1;
+      gPRP[RF_CH1] = -1;
       gSD [RF_CH1] = -1;
       gISI[RF_CH1] = -1;
       gBI [RF_CH1] = -1;
@@ -1612,10 +1689,11 @@ static void multi_RF_generate(void)
         gConfig.n_sonication = 0;
         gConfig.updateEnv |= (1 << CMD_sonication);
       }
-      stop_multi_timer();
+      
+      //stop_multi_timer();
+      
       HAL_TIM_Base_Stop(&htim6);
     }
-  
 }
 #endif
 
@@ -1624,26 +1702,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* Prevent unused argument(s) compilation warning */
   UNUSED(htim);
   
-  static uint16_t tick = 0;
   if(htim->Instance==TIM6)
   {
+    if(RF_Start == 0) {
+      RF_Start = 1;
+      RF_PSC = TIM6->PSC;
+      TIM6->PSC = 0;
+    } else {
 #if defined(CONFIG_MULTI)
     multi_RF_generate();
 #else
     single_RF_generate();
 #endif
+    }
   }
 
   if(htim->Instance == TIM7) {
     DEBUG_EvtHandler();
     KeyScan();
     // Repeat_key_Scan();
-    if(tick++ > 500)
-    {
-      tick = 0;
-      HAL_GPIO_TogglePin(LED2_GPIO_Port,LED2_Pin);
-      
-    }
+    
   }
 
   /* NOTE : This function should not be modified, when the callback is needed,

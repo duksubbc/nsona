@@ -1,6 +1,7 @@
 
 
 #include "main.h"
+#include "xprintf.h"
 #include "hal_nv.h"
 
 /*********************************************************************
@@ -58,6 +59,7 @@ static uint16_t Nv_Idx[NV_ID_MAX_NUM] = {
   NV_ID_DELAY_CH_LEN
 };
 
+#ifdef STM32F103xx
 #define HAL_FLASH_PAGE_ADDR_127   ((uint32_t)0x0803F800) /* Base @ of Page 127, 2 Kbytes */
 #define HAL_FLASH_PAGE_ADDR_126   ((uint32_t)0x0803F000) /* Base @ of Page 126, 2 Kbytes */
 #define HAL_FLASH_PAGE_ADDR_125   ((uint32_t)0x0803E800) /* Base @ of Page 125, 2 Kbytes */
@@ -77,9 +79,36 @@ static uint16_t Nv_Idx[NV_ID_MAX_NUM] = {
 // RTC data
 #define NV_ID_RTC_DATA_ADDRESS		HAL_FLASH_PAGE_ADDR_124
 
-#define USER_SPACE_OFFSET 1024 // id > 100
+#define USER_SPACE_OFFSET         1024 // id > 100
 
-#define	FLASH_SECTOR_SIZE			4096
+#define	FLASH_SECTOR_SIZE			    4096
+#endif
+
+#ifdef STM32F205xx
+#define HAL_FLASH_SECTOR_5   ((uint32_t)0x08020000) /* Base @ of Sector 5, 128 Kbytes */
+#define HAL_FLASH_SECTOR_4   ((uint32_t)0x08010000) /* Base @ of Sector 4, 64 Kbytes */
+#define HAL_FLASH_SECTOR_3   ((uint32_t)0x0800C000) /* Base @ of Sector 3, 16 Kbytes */
+#define HAL_FLASH_SECTOR_2   ((uint32_t)0x08008000) /* Base @ of Sector 2, 16 Kbytes */
+#define HAL_FLASH_SECTOR_1   ((uint32_t)0x08004000) /* Base @ of Sector 1, 16 Kbytes */
+#define HAL_FLASH_SECTOR_0   ((uint32_t)0x08000000) /* Base @ of Sector 0, 16 Kbytes */
+
+#define MAX_NV_IDS                 1024
+
+// DAC MID data : change to manufacturing data
+#define	NV_ID_DEV_ADDRESS			    HAL_FLASH_SECTOR_4
+// dev config information : 
+#define NV_ID_TABLE1_ADDRESS		  HAL_FLASH_SECTOR_4
+// serial number
+#define NV_ID_SERIAL_NO_ADDRESS		HAL_FLASH_SECTOR_4
+// RTC data
+#define NV_ID_RTC_DATA_ADDRESS		HAL_FLASH_SECTOR_4
+
+#define USER_SPACE_OFFSET         1024 // id > 100
+
+#define	FLASH_SECTOR_SIZE			    0x20000
+
+
+#endif
 
 /*********************************************************************
 * GLOBAL VARIABLES
@@ -109,7 +138,11 @@ extern unsigned char Read_Config_Register(void);
 */
 
 // 4096/16 =  256 byte reserved
-#define	USE_NV_MAX_SIZE	(FLASH_SECTOR_SIZE/16)	
+// #define	USE_NV_MAX_SIZE	(FLASH_SECTOR_SIZE/16)	
+
+// 65536/64 =  256 byte reserved
+#define	USE_NV_MAX_SIZE	(128)	
+
 static uint8_t tmp_buf[USE_NV_MAX_SIZE];
 
 /*********************************************************************
@@ -182,18 +215,29 @@ int HalFlashErase(uint32_t pgAddr)
 {
 
 	uint32_t PageError1 = 0;
+  uint32_t addr = pgAddr;
 
 	FLASH_EraseInitTypeDef EraseInitStruct;
 
   if (console_debug) {
     INFO("%s: addr = 0x%x\n", __FUNCTION__, pgAddr);
   }
+
+#ifdef STM32F205xx
+//  for(int i = 0; i < 6 ; i++) {
+//    if(FLASH_SECTOR_TABLE[i] == addr)
+//    {
+//      addr = i;
+//      break;
+//    }
+//  }
+#endif
 	HAL_FLASH_Unlock();
 
 	/* Fill EraseInit structure*/
 	EraseInitStruct.TypeErase   = FLASH_TYPEERASE_SECTORS ;//FLASH_TYPEERASE_PAGES;
 	//EraseInitStruct.PageAddress = pgAddr/0x800;
-	EraseInitStruct.Sector = pgAddr;
+	EraseInitStruct.Sector = 4;
 	EraseInitStruct.NbSectors     = 1;
 
 	if (HAL_FLASHEx_Erase(&EraseInitStruct, &PageError1) != HAL_OK)
@@ -547,12 +591,12 @@ void NvReadAll(void *env)
     conf->setAbnormalStopMinI = RF_DEF_ABNORMAL_MINI;
 
     conf->setDelay[RF_CH0] = RF_DEF_DELAY_CH0;
-    conf->setDelay[RF_CH1] = RF_DEF_DELAY_CH0;
-    conf->setDelay[RF_CH2] = RF_DEF_DELAY_CH0;
-    conf->setDelay[RF_CH3] = RF_DEF_DELAY_CH0;
-    conf->setDelay[RF_CH4] = RF_DEF_DELAY_CH0;
-    conf->setDelay[RF_CH5] = RF_DEF_DELAY_CH0;
-    conf->setDelay[RF_CH6] = RF_DEF_DELAY_CH0;
+    conf->setDelay[RF_CH1] = RF_DEF_DELAY_CH1;
+    conf->setDelay[RF_CH2] = RF_DEF_DELAY_CH2;
+    conf->setDelay[RF_CH3] = RF_DEF_DELAY_CH3;
+    conf->setDelay[RF_CH4] = RF_DEF_DELAY_CH4;
+    conf->setDelay[RF_CH5] = RF_DEF_DELAY_CH5;
+    conf->setDelay[RF_CH6] = RF_DEF_DELAY_CH6;
     conf->sonication = 0;
   }
   else {
@@ -741,165 +785,163 @@ void NvReadAll(void *env)
 
 }
 
-#if 0
-void nv_write_setFrequency(void)
+#if 1
+void nv_write_setFrequency(int32_t val)
 {
   int status;
-  uint32_t val;
 
-  INFO("%s: sys_mode = %d.\n", __func__, sys_mode);
-  val = sys_mode;
-  status = NvWrite(NV_ID_SYS_MODE,NV_ID_SYS_MODE_LEN,(void *)&val);
+  INFO("%s: setFrequency = %d.\n", __func__, val);
+  status = NvWrite(NV_ID_FREQUENCY,NV_ID_FREQUENCY_LEN,(void *)&val);
+  if(status != YSuccess)
+  {
+	  INFO("%s: NvWrite failed.\n", __func__);
+  }
+}
+
+void nv_write_setOutputVoltage(int32_t val)
+{
+  int status;
+
+  INFO("%s: val = %d.\n", __func__, val);
+  status = NvWrite(NV_ID_OUTPUTVOLTE,NV_ID_OUTPUTVOLTE_LEN,(void *)&val);
+  if(status != YSuccess)
+  {
+	  INFO("%s: NvWrite failed.\n", __func__);
+  }
+}
+
+
+void nv_write_setTBD(int32_t val)
+{
+  int status;
+
+  INFO("%s: val = %d.\n", __func__, val);
+  status = NvWrite(NV_ID_TBD,NV_ID_TBD_LEN,(void *)&val);
+  if(status != YSuccess)
+  {
+	  INFO("%s: NvWrite failed.\n", __func__);
+  }
+}
+
+void nv_write_setDuty(int32_t val)
+{
+  int status;
+
+  INFO("%s: val = %d.\n", __func__, val);
+  status = NvWrite(NV_ID_DUTY,NV_ID_DUTY_LEN,(void *)&val);
+  if(status != YSuccess)
+  {
+	  INFO("%s: NvWrite failed.\n", __func__);
+  }
+}
+
+void nv_write_setPRP(int32_t val)
+{
+  int status;
+
+  INFO("%s: val = %d.\n", __func__, val);
+  status = NvWrite(NV_ID_PRP,NV_ID_PRP_LEN,(void *)&val);
   if(status != YSuccess)
   {
 	INFO("%s: NvWrite failed.\n", __func__);
   }
 }
 
-void nv_write_setOutputVoltage(void)
+void nv_write_setSD(int32_t val)
 {
   int status;
-  uint32_t val;
 
-  val = stim_implimit;
-DBG_INFO("%s: val = %d.\n", __func__, val);
-  status = NvWrite(NV_ID_RLIMIT,NV_ID_RLIMIT_LEN,(void *)&val);
+  INFO("%s: val = %d.\n", __func__, val);
+  status = NvWrite(NV_ID_SD,NV_ID_SD_LEN,(void *)&val);
   if(status != YSuccess)
   {
-	DBG_INFO("%s: NvWrite failed.\n", __func__);
+	  INFO("%s: NvWrite failed.\n", __func__);
   }
 }
 
-void nv_write_setDuty(void)
+void nv_write_setISI(int32_t val)
 {
   int status;
-  uint32_t val;
 
-  val = stim_current;
-DBG_INFO("%s: val = %d.\n", __func__, val);
-  status = NvWrite(NV_ID_CURRENT,NV_ID_CURRENT_LEN,(void *)&val);
+INFO("%s: val = %d.\n", __func__, val);
+  status = NvWrite(NV_ID_ISI,NV_ID_ISI_LEN,(void *)&val);
   if(status != YSuccess)
   {
-	DBG_INFO("%s: NvWrite failed.\n", __func__);
+	INFO("%s: NvWrite failed.\n", __func__);
   }
 }
 
-void nv_write_setPRP(void)
+void nv_write_setBI(int32_t val)
 {
   int status;
-  uint32_t val;
 
-  val = stim_fadein;
-DBG_INFO("%s: val = %d.\n", __func__, val);
-  status = NvWrite(NV_ID_FADEIN,NV_ID_FADEIN_LEN,(void *)&val);
+INFO("%s: val = %d.\n", __func__, val);
+
+  status = NvWrite(NV_ID_BI,NV_ID_BI_LEN,(void *)&val);
   if(status != YSuccess)
   {
-	DBG_INFO("%s: NvWrite failed.\n", __func__);
+	INFO("%s: NvWrite failed.\n", __func__);
   }
 }
 
-void nv_write_setSD(void)
-{
-  int status;
-  uint32_t val;
-
-  val = stim_fadeout;
-DBG_INFO("%s: val = %d.\n", __func__, val);
-  status = NvWrite(NV_ID_FADEOUT,NV_ID_FADEOUT_LEN,(void *)&val);
-  if(status != YSuccess)
-  {
-	DBG_INFO("%s: NvWrite failed.\n", __func__);
-  }
-}
-
-void nv_write_setISI(void)
-{
-  int status;
-  uint32_t val;
-
-  val = stim_duration;
-DBG_INFO("%s: val = %d.\n", __func__, val);
-  status = NvWrite(NV_ID_DURATION,NV_ID_DURATION_LEN,(void *)&val);
-  if(status != YSuccess)
-  {
-	DBG_INFO("%s: NvWrite failed.\n", __func__);
-  }
-}
-
-void nv_write_setBI(void)
-{
-  int status;
-  uint32_t val;
-
-  val = (((uint32_t)red_def_pwm)<<24) & 0xFF000000;
-  val |= (((uint32_t)green_def_pwm)<<16) & 0x00FF0000;
-  val |= (((uint32_t)blue_def_pwm)<<8) & 0x0000FF00;
-
-DBG_INFO("%s: val = %d.\n", __func__, val);
-
-  status = NvWrite(NV_ID_RGB_C,NV_ID_RGB_C_LEN,(void *)&val);
-  if(status != YSuccess)
-  {
-	DBG_INFO("%s: NvWrite failed.\n", __func__);
-  }
-}
-
-void nv_write_setTD(void)
+void nv_write_setTD(int32_t val)
 {
   int status;
 
-DBG_INFO("%s: name(%d) : %s.\n", __func__, strlen((char *)ble_device_name), ble_device_name);
+  INFO("%s: val = %d.\n", __func__, val);
 
-  status = NvWrite(NV_ID_BLE_NAME,NV_ID_BLE_NAME_LEN,(void *)ble_device_name);
+  status = NvWrite(NV_ID_TD,NV_ID_TD_LEN,(void *)&val);
   if(status != YSuccess)
   {
-	DBG_INFO("%s: NvWrite failed.\n", __func__);
+	INFO("%s: NvWrite failed.\n", __func__);
   }
 }
 
 
-void nv_write_setImpedance(void)
+void nv_write_setImpedance(int32_t val)
 {
   int status;
-  uint32_t val;
 
-  if (dev_sham_mode)
-	val = DEV_STIM_MODE_SHAM;
-  else 
-  	val = dev_stim_mode;
-DBG_INFO("%s: val = %d.\n", __func__, val);
-  status = NvWrite(NV_ID_STIM_MODE,NV_ID_STIM_MODE_LEN,(void *)&val);
+  INFO("%s: val = %d.\n", __func__, val);
+  status = NvWrite(NV_ID_IMPEDANCE,NV_ID_IMPEDANCE_LEN,(void *)&val);
   if(status != YSuccess)
   {
-	DBG_INFO("%s: NvWrite failed.\n", __func__);
+	INFO("%s: NvWrite failed.\n", __func__);
   }
 }
 
-void nv_write_setAbnormalStopMode(void)
+void nv_write_setAbnormalStopMode(int32_t val)
 {
   int status;
-  uint32_t val;
 
-  val = set_ac_hz;
-DBG_INFO("%s: val = %d.\n", __func__, val);
-  status = NvWrite(NV_ID_AC_HZ,NV_ID_AC_HZ_LEN,(void *)&val);
+  INFO("%s: val = %d.\n", __func__, val);
+  status = NvWrite(NV_ID_ABNORMAL_STOPMODE,NV_ID_ABNORMAL_STOPMODE_LEN,(void *)&val);
   if(status != YSuccess)
   {
-	DBG_INFO("%s: NvWrite failed.\n", __func__);
+	INFO("%s: NvWrite failed.\n", __func__);
   }
 }
 
-void nv_write_setDelay(void)
+void nv_write_setDelay(int32_t val)
 {
   int status;
-  uint32_t val;
+  int32_t array[MAX_RF_CH];
 
-  val = dev_op_mode;
-  DBG_INFO("%s: val = %d.\n", __func__, val);
-  status = NvWrite(NV_ID_DEV_MODE,NV_ID_DEV_MODE_LEN,(void *)&val);
+  INFO("%s: val = %d.\n", __func__, val);
+
+  memset(array, 0, sizeof(array));
+  array[RF_CH0] = val;
+  array[RF_CH1] = val;
+  array[RF_CH2] = val;
+  array[RF_CH3] = val;
+  array[RF_CH4] = val;
+  array[RF_CH5] = val;
+  array[RF_CH6] = val;
+
+  status = NvWrite(NV_ID_DELAY_CH,NV_ID_DELAY_CH_LEN,(void *)array);
   if(status != YSuccess)
   {
-	  DBG_INFO("%s: NvWrite failed.\n", __func__);
+	  INFO("%s: NvWrite failed.\n", __func__);
   }
 }
 #endif

@@ -43,7 +43,7 @@ typedef enum _COMMAMD_ID {
 TASK2_EXT BUFFER_t USART_Buffer;
 TASK2_EXT uint8_t  USARTBuffer[];
 
-TASK2_EXT void displayEnv(COMMAMD_ID id);
+TASK2_EXT void displayEnv(CONFIG_T *sysconf,COMMAMD_ID id);
 
 TASK2_EXT void InituserTask02(CONFIG_T *sysconf);
 TASK2_EXT void userTask02(CONFIG_T *sysconf);

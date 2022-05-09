@@ -32,7 +32,6 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f2xx_hal.h"
-#include "xprintf.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -235,6 +234,23 @@ extern void LED1_ON(uint8_t on);
 #define INFO_PRINT(fmt,arg) xprintf(fmt,##arg)
 
 
+
+                            
+#define USEC100  (1)
+#define SEC      (250000)
+//#define SEC      (1000000)       
+//#define SEC      (100000)
+
+#define to1mSEC(x)      (x/250)
+#define to100uSEC(x)    (x/25)
+#define to1sSEC(x)      (x/250000)
+
+
+#define from1mSEC(x)      (x*250)
+#define from100uSEC(x)    (x*25)
+#define from1sSEC(x)      (x*250000)
+
+
 #define RF_CH0          0  
 #define RF_CH1          1
 #define RF_CH2          2
@@ -245,14 +261,14 @@ extern void LED1_ON(uint8_t on);
 
 #define RF_DEF_FREQUENCY    250000
 #define RF_DEF_OUTVOLT      10
-#define RF_DEF_TBD          250000
+#define RF_DEF_TBD          from100uSEC(1)
 #define RF_DEF_DUTY         50
-#define RF_DEF_RPR          1000
+#define RF_DEF_RPR          from100uSEC(2)
 
-#define RF_DEF_SD           5000
-#define RF_DEF_ISI          50000
-#define RF_DEF_BI           55000
-#define RF_DEF_TD           1000000
+#define RF_DEF_SD           from1mSEC(1)
+#define RF_DEF_ISI          from1sSEC(1)
+#define RF_DEF_BI           from1sSEC(1)
+#define RF_DEF_TD           from1sSEC(10)
 
 #define RF_DEF_IMPEDANCE    50
 #define RF_DEF_ABNORMAL_MODE    0
@@ -262,16 +278,13 @@ extern void LED1_ON(uint8_t on);
 #define RF_DEF_ABNORMAL_MAXI    0
 #define RF_DEF_ABNORMAL_MINI    0
 
-#define RF_DEF_DELAY_CH0        1
-#define RF_DEF_DELAY_CH1        1
-#define RF_DEF_DELAY_CH2        1
-#define RF_DEF_DELAY_CH3        1
-#define RF_DEF_DELAY_CH4        1
-#define RF_DEF_DELAY_CH5        1
-#define RF_DEF_DELAY_CH6        1
-                            
-#define USEC100  (100)
-#define SEC      (1000*10)                            
+#define RF_DEF_DELAY_CH0        from100uSEC(1)
+#define RF_DEF_DELAY_CH1        from100uSEC(1)
+#define RF_DEF_DELAY_CH2        from100uSEC(1)
+#define RF_DEF_DELAY_CH3        from100uSEC(1)
+#define RF_DEF_DELAY_CH4        from100uSEC(1)
+#define RF_DEF_DELAY_CH5        from100uSEC(1)
+#define RF_DEF_DELAY_CH6        from100uSEC(1)
 
 extern uint8_t  console_debug ;
 /* USER CODE END Private defines */

@@ -27,7 +27,7 @@ uint8_t  USARTBuffer[RX_RING_SIZE];
 #define CHAR2NUM(x)     ((x) - '0')
 
 static int32_t ParseNumber(char* ptr, uint8_t* cnt);
-static void checkCmdArgs(COMMAMD_ID id, uint8_t num);
+static void checkCmdArgs(CONFIG_T *sysconf,COMMAMD_ID id, uint8_t num);
 static void cmd_hemp(void);
 
 ////////////////////////////////////////////////////////////
@@ -38,6 +38,7 @@ static char     recevied[256];
 ////////////////////////////////////////////////////////////
 void InituserTask02(CONFIG_T *sysconf)
 {
+  DBG_PRINT("\r\nNS-US300 $ ");
   setSysTimeOut(DEBUG_TIMER,1);
   HAL_TIM_Base_Start_IT(&htim7);
 }
@@ -52,7 +53,7 @@ void userTask02(CONFIG_T *sysconf)
     COMMAMD_ID id;
     const char *text = "\r\nNS-US300 $ ";
   
-    if(gConfig.state != 0)
+    if(sysconf->state != 0)
     {
       char* ptr;
       uint16_t num = 0;
@@ -140,88 +141,85 @@ void userTask02(CONFIG_T *sysconf)
                 break;
               case 2: 
                 if(id == CMD_setFrequency) {
-                  gConfig.n_setFrequency =  ParseNumber(ptr,NULL);
+                  sysconf->n_setFrequency =  ParseNumber(ptr,NULL);
                 } 
                 else if(id == CMD_setOutputVoltage) {
-                  gConfig.n_setOutputVoltage =  ParseNumber(ptr,NULL);
+                  sysconf->n_setOutputVoltage =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setTBDAndDuty) {
-                  gConfig.n_setTBD =  ParseNumber(ptr,NULL);
+                  sysconf->n_setTBD =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setTiming) {
-                  gConfig.n_setSD =  ParseNumber(ptr,NULL);
-                  gConfig.n_setSD *= 10;
+                  sysconf->n_setSD =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setImpedance) {
-                  gConfig.n_setImpedance =  ParseNumber(ptr,NULL);
+                  sysconf->n_setImpedance =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setDelay) {
-                  gConfig.n_setDelay[RF_CH1] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH1] =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setAbnormalStopMode) {
-                  gConfig.n_setAbnormalStopMode =  ParseNumber(ptr,NULL);
+                  sysconf->n_setAbnormalStopMode =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_sonication) {
                   if(strstr(ptr,"start") != NULL) {
-                    gConfig.n_sonication = 1;
+                    sysconf->n_sonication = 1;
 
                   } else if(strstr(ptr,"stop") != NULL) {
-                    gConfig.n_sonication = 0;
+                    sysconf->n_sonication = 0;
                   }
                 }
                 else if(id == CMD_setDigipot) {
-                  gConfig.digipotCH =  ParseNumber(ptr,NULL);
+                  sysconf->digipotCH =  ParseNumber(ptr,NULL);
                 }
                 break;
               case 3:
                 if(id == CMD_setTBDAndDuty) {
-                  gConfig.n_setDuty =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDuty =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setTiming) {
-                  gConfig.n_setISI =  ParseNumber(ptr,NULL);
-                  gConfig.n_setISI *= SEC;
+                  sysconf->n_setISI =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setDelay) {
-                  gConfig.n_setDelay[RF_CH2] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH2] =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setAbnormalStopMode) {
-                  gConfig.n_setAbnormalStopMaxV =  ParseNumber(ptr,NULL);
+                  sysconf->n_setAbnormalStopMaxV =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setDigipot) {
-                  gConfig.setDigipot =  ParseNumber(ptr,NULL);
+                  sysconf->setDigipot =  ParseNumber(ptr,NULL);
                 }
                 break;
               case 4: 
                 if(id == CMD_setTiming) {
-                  gConfig.n_setTD =  ParseNumber(ptr,NULL);
-                  gConfig.n_setTD *= SEC;
+                  sysconf->n_setTD =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setDelay) {
-                  gConfig.n_setDelay[RF_CH3] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH3] =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setAbnormalStopMode) {
-                  gConfig.n_setAbnormalStopMaxI =  ParseNumber(ptr,NULL);
+                  sysconf->n_setAbnormalStopMaxI =  ParseNumber(ptr,NULL);
                 }
                 break;
               case 5:
                 if(id == CMD_setDelay) {
-                  gConfig.n_setDelay[RF_CH4] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH4] =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setAbnormalStopMode) {
-                  gConfig.n_setAbnormalStopMinV =  ParseNumber(ptr,NULL);
+                  sysconf->n_setAbnormalStopMinV =  ParseNumber(ptr,NULL);
                 }
                 break;
               case 6:
                 if(id == CMD_setDelay) {
-                  gConfig.n_setDelay[RF_CH5] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH5] =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setAbnormalStopMode) {
-                  gConfig.n_setAbnormalStopMinI =  ParseNumber(ptr,NULL);
+                  sysconf->n_setAbnormalStopMinI =  ParseNumber(ptr,NULL);
                 }
                 break;
               case 7:
                 if(id == CMD_setDelay) {
-                  gConfig.n_setDelay[RF_CH6] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH6] =  ParseNumber(ptr,NULL);
                 }
                 break;  
               default: break;
@@ -231,8 +229,8 @@ void userTask02(CONFIG_T *sysconf)
             ptr = strtok(NULL, " ");
           }
           //
-          checkCmdArgs(id,num);
-          displayEnv(id);
+          checkCmdArgs(sysconf,id,num);
+          displayEnv(sysconf,id);
         }
         
         xprintf(text);
@@ -279,16 +277,17 @@ static int32_t ParseNumber(char* ptr, uint8_t* cnt) {
 	return sum;
 }
 
-static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
+static void checkCmdArgs(CONFIG_T *sysconf,COMMAMD_ID id, uint8_t num)
 {
 
+  uint32_t error = 0;
   switch(id) {
    case CMD_setFrequency:
     if(num == 3) {
-      gConfig.updateEnv |= (1 << CMD_setFrequency) ;
+      sysconf->updateEnv |= (1 << CMD_setFrequency) ;
       xprintf("\r\nsetFrequency OK");
     } else {
-      gConfig.n_setFrequency = gConfig.setFrequency;
+      sysconf->n_setFrequency = sysconf->setFrequency;
       if(num > 3)
         DBG_ERROR("\r\nsetFrequency too many arguments");
       else
@@ -297,10 +296,10 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
     break;
    case CMD_setOutputVoltage:
     if(num == 3) {
-      gConfig.updateEnv |= (1 << CMD_setOutputVoltage) ;
+      sysconf->updateEnv |= (1 << CMD_setOutputVoltage) ;
       xprintf("\r\nsetOutputVoltage OK");
     } else {
-      gConfig.n_setOutputVoltage = gConfig.setOutputVoltage;
+      sysconf->n_setOutputVoltage = sysconf->setOutputVoltage;
       if(num > 3)
         DBG_ERROR("\r\nsetOutputVoltage too many arguments");
       else
@@ -309,11 +308,11 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
     break;
    case CMD_setTBDAndDuty:
     if(num == 4) {
-      gConfig.updateEnv |= (1 << CMD_setTBDAndDuty) ;
+      sysconf->updateEnv |= (1 << CMD_setTBDAndDuty) ;
       xprintf("\r\nsetTBDAndDuty OK");
     } else {
-      gConfig.n_setTBD  =  gConfig.setTBD;
-      gConfig.n_setDuty = gConfig.setDuty;
+      sysconf->n_setTBD  =  sysconf->setTBD;
+      sysconf->n_setDuty = sysconf->setDuty;
       if(num > 4)
         DBG_ERROR("\r\nsetTBDAndDuty too many arguments");
       else
@@ -322,12 +321,27 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
     break;
    case CMD_setTiming:
     if(num == 5) {
-      gConfig.updateEnv |= (1 << CMD_setTiming) ;
-      xprintf("\r\nsetTiming OK");
+      if(sysconf->n_setSD <  1 || sysconf->n_setSD > 500)
+        error |= (1<< 0);
+      if(sysconf->n_setISI < 0 || sysconf->n_setISI > 30)
+        error |= (1<< 1);
+      if(sysconf->n_setTD < 0  || sysconf->n_setTD > 1800)
+        error |= (1<< 2);
+      if(!error) {  
+        sysconf->updateEnv |= (1 << CMD_setTiming) ;
+        xprintf("\r\nsetTiming OK");
+      } else {
+        if(error & (1<<0))
+          DBG_ERROR("\r\nFail SD is must 1~500 !!!");
+        if(error & (1<<1))
+          DBG_ERROR("\r\nFail ISI is must 0~30 !!!");
+        if(error & (1<<2))
+          DBG_ERROR("\r\nFail TD is must 0~1800 !!!");
+      }
     } else {
-      gConfig.n_setSD  = gConfig.setSD;
-      gConfig.n_setISI = gConfig.setISI;
-      gConfig.n_setTD  = gConfig.setTD;
+      sysconf->n_setSD  = sysconf->setSD;
+      sysconf->n_setISI = sysconf->setISI;
+      sysconf->n_setTD  = sysconf->setTD;
       if(num > 5)
         DBG_ERROR("\r\nsetTiming too many arguments");
       else
@@ -336,10 +350,10 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
     break;
    case CMD_setImpedance:
     if(num == 3) {
-      gConfig.updateEnv |= (1 << CMD_setImpedance) ;
+      sysconf->updateEnv |= (1 << CMD_setImpedance) ;
       xprintf("\r\nsetImpedance OK");
     } else {
-      gConfig.n_setImpedance = gConfig.setImpedance;
+      sysconf->n_setImpedance = sysconf->setImpedance;
       if(num > 3)
         DBG_ERROR("\r\nsetImpedance too many arguments");
       else
@@ -348,16 +362,16 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
     break;
    case CMD_setDelay:
     if(num == 5) {
-      gConfig.updateEnv |= (1 << CMD_setDelay) ;
+      sysconf->updateEnv |= (1 << CMD_setDelay) ;
       xprintf("\r\nsetDelay OK");
     } else {
-      gConfig.n_setDelay[RF_CH0] = gConfig.setDelay[RF_CH0];
-      gConfig.n_setDelay[RF_CH1] = gConfig.setDelay[RF_CH1];
-      gConfig.n_setDelay[RF_CH2] = gConfig.setDelay[RF_CH2];
-      gConfig.n_setDelay[RF_CH3] = gConfig.setDelay[RF_CH3];
-      gConfig.n_setDelay[RF_CH4] = gConfig.setDelay[RF_CH4];
-      gConfig.n_setDelay[RF_CH5] = gConfig.setDelay[RF_CH5];
-      gConfig.n_setDelay[RF_CH6] = gConfig.setDelay[RF_CH6];
+      sysconf->n_setDelay[RF_CH0] = sysconf->setDelay[RF_CH0];
+      sysconf->n_setDelay[RF_CH1] = sysconf->setDelay[RF_CH1];
+      sysconf->n_setDelay[RF_CH2] = sysconf->setDelay[RF_CH2];
+      sysconf->n_setDelay[RF_CH3] = sysconf->setDelay[RF_CH3];
+      sysconf->n_setDelay[RF_CH4] = sysconf->setDelay[RF_CH4];
+      sysconf->n_setDelay[RF_CH5] = sysconf->setDelay[RF_CH5];
+      sysconf->n_setDelay[RF_CH6] = sysconf->setDelay[RF_CH6];
       
       if(num > 5)
         DBG_ERROR("\r\nsetsetDelay too many arguments");
@@ -367,14 +381,14 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
     break;
    case CMD_setAbnormalStopMode:
     if(num == 7) {
-      gConfig.updateEnv |= (1 << CMD_setAbnormalStopMode) ;
+      sysconf->updateEnv |= (1 << CMD_setAbnormalStopMode) ;
       xprintf("\r\nsetAbnormalStopMode OK");
     } else {
-      gConfig.n_setAbnormalStopMode = gConfig.setAbnormalStopMode;
-      gConfig.n_setAbnormalStopMaxI = gConfig.setAbnormalStopMaxI;
-      gConfig.n_setAbnormalStopMaxV = gConfig.setAbnormalStopMaxV;
-      gConfig.n_setAbnormalStopMinV = gConfig.setAbnormalStopMinV;
-      gConfig.n_setAbnormalStopMinI = gConfig.setAbnormalStopMinI;
+      sysconf->n_setAbnormalStopMode = sysconf->setAbnormalStopMode;
+      sysconf->n_setAbnormalStopMaxI = sysconf->setAbnormalStopMaxI;
+      sysconf->n_setAbnormalStopMaxV = sysconf->setAbnormalStopMaxV;
+      sysconf->n_setAbnormalStopMinV = sysconf->setAbnormalStopMinV;
+      sysconf->n_setAbnormalStopMinI = sysconf->setAbnormalStopMinI;
 
       if(num > 7)
         DBG_ERROR("\r\nsetAbnormalStopMode too many arguments");
@@ -384,21 +398,21 @@ static void checkCmdArgs(COMMAMD_ID id, uint8_t num)
     break;
    case CMD_sonication:
     if(num == 2) {
-      INFO("\r\nsonication [%s]\r\n",gConfig.sonication == 1? "start":"stop");
+      INFO("\r\nsonication [%s]\r\n",sysconf->sonication == 1? "start":"stop");
     } else if(num == 3) {
-      gConfig.updateEnv |= (1 << CMD_sonication) ;
+      sysconf->updateEnv |= (1 << CMD_sonication) ;
       xprintf("\r\nsonication OK");
-      //xprintf("\r\n %s sonication",gConfig.n_sonication == 1? "start":"stop");
+      //xprintf("\r\n %s sonication",sysconf->n_sonication == 1? "start":"stop");
     } else {
-      gConfig.n_sonication = gConfig.sonication;
+      sysconf->n_sonication = sysconf->sonication;
       DBG_ERROR("\r\nsonication too many arguments");
     }
     break;
    case CMD_setDigipot:
     if(num == 4) {
-      if(gConfig.digipotCH == 1 || gConfig.digipotCH == 2 || gConfig.digipotCH == 3 || gConfig.digipotCH == 4)
+      if(sysconf->digipotCH == 1 || sysconf->digipotCH == 2 || sysconf->digipotCH == 3 || sysconf->digipotCH == 4)
       {
-        gConfig.updateEnv |= (1 << CMD_setDigipot) ;
+        sysconf->updateEnv |= (1 << CMD_setDigipot) ;
       } else {
         DBG_ERROR("\r\nsetDigipot Invalid CH");
       }
@@ -428,7 +442,7 @@ static void cmd_hemp(void)
   INFO("\r\n=================================");
 }
 
-void displayEnv(COMMAMD_ID id)
+void displayEnv(CONFIG_T *sysconf, COMMAMD_ID id)
 {
   char str[64];
   switch(id) {
@@ -439,41 +453,41 @@ void displayEnv(COMMAMD_ID id)
       display_version();
       break; 
    case CMD_getFrequency:
-      INFO("\r\nFrequency = %d Hz\r\n",gConfig.setFrequency);
+      INFO("\r\nFrequency = %d Hz\r\n",sysconf->setFrequency);
       break;
    case CMD_getOutputVoltage:
-      INFO("\r\nOutputVoltage = %d V\r\n",gConfig.setOutputVoltage);
+      INFO("\r\nOutputVoltage = %d V\r\n",sysconf->setOutputVoltage);
       INFO("\r\n");
       break;
    case CMD_getTBDAndDuty:
-      sprintf(str,"\r\nTBD  = %0.1f ms (%d) ",(float)gConfig.setTBD/10,gConfig.setTBD);
+      sprintf(str,"\r\nTBD  = %0.1f ms (%d) ",(float)to1mSEC((float)sysconf->setTBD),sysconf->setTBD);
       INFO(str);
-      sprintf(str,"\r\nRPR  = %0.1f ms (%d) ",(float)gConfig.setPRP/10,gConfig.setPRP);
+      sprintf(str,"\r\nRPR  = %0.3f ms (%d) ",(float)to1mSEC((float)sysconf->setPRP),sysconf->setPRP);
       INFO(str);
-      INFO("\r\nDuty = %d %% \r\n",gConfig.setDuty);
+      INFO("\r\nDuty = %d %% \r\n",sysconf->setDuty);
       INFO("\r\n");
       break;
    case CMD_getTiming:
-      INFO("\r\nSD  = %6d ms (%8d)",   gConfig.setSD/10,   gConfig.setSD);
-      INFO("\r\nISI = %6d S  (%8d)",   gConfig.setISI/SEC, gConfig.setISI);
-      INFO("\r\nBI  = %6d S  (%8d)",    gConfig.setBI/SEC, gConfig.setBI);
-      INFO("\r\nTD  = %6d S  (%8d)\r\n",gConfig.setTD/SEC, gConfig.setTD);
+      INFO("\r\nSD  = %6d ms (%8d)",    to1mSEC(sysconf->setSD),  sysconf->setSD);
+      INFO("\r\nISI = %6d S  (%8d)",    to1sSEC(sysconf->setISI), sysconf->setISI);
+      INFO("\r\nBI  = %6d S  (%8d)",    to1sSEC(sysconf->setBI),  sysconf->setBI);
+      INFO("\r\nTD  = %6d S  (%8d)\r\n",to1sSEC(sysconf->setTD),  sysconf->setTD);
       break;
    case CMD_getDelay:
-      INFO("\r\nCH1  = %6d us (%8d)",    gConfig.setDelay[RF_CH1]*USEC100 , gConfig.setDelay[RF_CH1]);
-      INFO("\r\nCH2  = %6d us (%8d)",    gConfig.setDelay[RF_CH2]*USEC100 , gConfig.setDelay[RF_CH2]);
-      INFO("\r\nCH3  = %6d us (%8d)",    gConfig.setDelay[RF_CH3]*USEC100,  gConfig.setDelay[RF_CH3]);
-      INFO("\r\nCH4  = %6d us (%8d)\r\n",gConfig.setDelay[RF_CH4]*USEC100,  gConfig.setDelay[RF_CH4]);
+      INFO("\r\nCH1  = %6d us (%8d)",    sysconf->setDelay[RF_CH1]*USEC100 , sysconf->setDelay[RF_CH1]);
+      INFO("\r\nCH2  = %6d us (%8d)",    sysconf->setDelay[RF_CH2]*USEC100 , sysconf->setDelay[RF_CH2]);
+      INFO("\r\nCH3  = %6d us (%8d)",    sysconf->setDelay[RF_CH3]*USEC100,  sysconf->setDelay[RF_CH3]);
+      INFO("\r\nCH4  = %6d us (%8d)\r\n",sysconf->setDelay[RF_CH4]*USEC100,  sysconf->setDelay[RF_CH4]);
       break;
    case CMD_getImpedance:
-      INFO("\r\nImpedance  = %d \r\n",gConfig.setImpedance);
+      INFO("\r\nImpedance  = %d \r\n",sysconf->setImpedance);
       break;
    case CMD_getAbnormalStopMode:
-      INFO("\r\nAbnormal[%3s]",gConfig.setAbnormalStopMode == 0? "Off":"On");
-      INFO("\r\nMax Volt     = %5d ",gConfig.setAbnormalStopMaxV);
-      INFO("\r\nmin Volt     = %5d ",gConfig.setAbnormalStopMinV);
-      INFO("\r\nMax Current  = %5d ",gConfig.setAbnormalStopMaxI);
-      INFO("\r\nmin Current  = %5d \r\n",gConfig.setAbnormalStopMinI);
+      INFO("\r\nAbnormal[%3s]",sysconf->setAbnormalStopMode == 0? "Off":"On");
+      INFO("\r\nMax Volt     = %5d ",sysconf->setAbnormalStopMaxV);
+      INFO("\r\nmin Volt     = %5d ",sysconf->setAbnormalStopMinV);
+      INFO("\r\nMax Current  = %5d ",sysconf->setAbnormalStopMaxI);
+      INFO("\r\nmin Current  = %5d \r\n",sysconf->setAbnormalStopMinI);
       break;
   }
 }
