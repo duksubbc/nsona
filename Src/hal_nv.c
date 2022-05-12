@@ -4,6 +4,8 @@
 #include "xprintf.h"
 #include "hal_nv.h"
 
+
+// #define USE_INTERNAL_FLASH
 /*********************************************************************
 * MACROS
 */
@@ -788,6 +790,7 @@ void NvReadAll(void *env)
 #if 1
 void nv_write_setFrequency(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
   INFO("%s: setFrequency = %d.\n", __func__, val);
@@ -796,10 +799,12 @@ void nv_write_setFrequency(int32_t val)
   {
 	  INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 void nv_write_setOutputVoltage(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
   INFO("%s: val = %d.\n", __func__, val);
@@ -808,11 +813,13 @@ void nv_write_setOutputVoltage(int32_t val)
   {
 	  INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 
 void nv_write_setTBD(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
   INFO("%s: val = %d.\n", __func__, val);
@@ -821,10 +828,12 @@ void nv_write_setTBD(int32_t val)
   {
 	  INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 void nv_write_setDuty(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
   INFO("%s: val = %d.\n", __func__, val);
@@ -833,10 +842,12 @@ void nv_write_setDuty(int32_t val)
   {
 	  INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 void nv_write_setPRP(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
   INFO("%s: val = %d.\n", __func__, val);
@@ -845,10 +856,12 @@ void nv_write_setPRP(int32_t val)
   {
 	INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 void nv_write_setSD(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
   INFO("%s: val = %d.\n", __func__, val);
@@ -857,35 +870,41 @@ void nv_write_setSD(int32_t val)
   {
 	  INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 void nv_write_setISI(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
-INFO("%s: val = %d.\n", __func__, val);
+  INFO("%s: val = %d.\n", __func__, val);
   status = NvWrite(NV_ID_ISI,NV_ID_ISI_LEN,(void *)&val);
   if(status != YSuccess)
   {
 	INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 void nv_write_setBI(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
-INFO("%s: val = %d.\n", __func__, val);
+  INFO("%s: val = %d.\n", __func__, val);
 
   status = NvWrite(NV_ID_BI,NV_ID_BI_LEN,(void *)&val);
   if(status != YSuccess)
   {
 	INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 void nv_write_setTD(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
   INFO("%s: val = %d.\n", __func__, val);
@@ -895,11 +914,13 @@ void nv_write_setTD(int32_t val)
   {
 	INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 
 void nv_write_setImpedance(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
   INFO("%s: val = %d.\n", __func__, val);
@@ -908,10 +929,12 @@ void nv_write_setImpedance(int32_t val)
   {
 	INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 void nv_write_setAbnormalStopMode(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
 
   INFO("%s: val = %d.\n", __func__, val);
@@ -920,10 +943,12 @@ void nv_write_setAbnormalStopMode(int32_t val)
   {
 	INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 
 void nv_write_setDelay(int32_t val)
 {
+  #ifdef USE_INTERNAL_FLASH
   int status;
   int32_t array[MAX_RF_CH];
 
@@ -943,5 +968,6 @@ void nv_write_setDelay(int32_t val)
   {
 	  INFO("%s: NvWrite failed.\n", __func__);
   }
+  #endif
 }
 #endif
