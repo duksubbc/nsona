@@ -76,6 +76,9 @@ UART_HandleTypeDef huart3;
 CONFIG_T gConfig;
 uint8_t  UARTRxBuffIdx;
 uint8_t  UARTRxBuff[128];
+
+uint8_t  UARTRxEEGBuffIdx;
+uint8_t  UARTRxEEGBuff[128];
 // char     Received[256];
 // BUFFER_t USART_Buffer;
 // uint8_t  USARTBuffer[RX_RING_SIZE];
@@ -95,7 +98,6 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_SPI1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM5_Init(void);
 static void MX_TIM8_Init(void);
@@ -106,6 +108,7 @@ static void MX_DAC_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
 
 
@@ -243,7 +246,7 @@ void indro_message(void)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-//  uint8_t resis = 0;
+  uint8_t x = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -266,7 +269,6 @@ int main(void)
   MX_GPIO_Init();
   MX_ADC1_Init();
   MX_I2C1_Init();
-  MX_SPI1_Init();
   MX_TIM1_Init();
   MX_TIM5_Init();
   MX_TIM8_Init();
@@ -277,23 +279,22 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM7_Init();
   MX_USART2_UART_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   InitSysTimeOut();
 #if defined(DEBUG_UART3)
   DEBUG_LL_USARTInit(&huart1,&huart3);
   BUFFER_Init(&USART_Buffer, RX_RING_SIZE, USARTBuffer);
-#elif defined(DEBUG_UART2)
-  DEBUG_LL_USARTInit(&huart1,&huart2);
-  BUFFER_Init(&USART_Buffer, RX_RING_SIZE, USARTBuffer);
 #else
   DEBUG_LL_USARTInit(&huart1,NULL);
   BUFFER_Init(&USART_Buffer, RX_RING_SIZE, USARTBuffer);
 #endif
-  indro_message();
   
-  AUDIO_RESET_LOW();
-  HAL_Delay(100);
-  AUDIO_RESET_HI();
+  indro_message();
+#if 0
+ 
+#endif
+  
   #if defined(CONFIG_MULTI)
   {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -325,14 +326,17 @@ int main(void)
 #if defined(DEBUG_UART3)
   HAL_UART_Receive_IT(&huart3,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);
   HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
-#elif defined(DEBUG_UART2)
-  HAL_UART_Receive_IT(&huart2,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1); 
-  HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
 #else
   HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
 #endif
   
+  UARTRxEEGBuffIdx = 0;
+  HAL_UART_Receive_IT(&huart2,(uint8_t*)&UARTRxEEGBuff[UARTRxEEGBuffIdx],1); 
+  
   Load_Env(&gConfig);
+  
+  
+  sound_enable();
   
   InituserTask01(&gConfig);
   InituserTask02(&gConfig);
@@ -530,11 +534,11 @@ static void MX_SPI1_Init(void)
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -958,7 +962,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 57600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -1034,8 +1038,8 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(AUDIO_CS_GPIO_Port, AUDIO_CS_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pins : EN_HV_Pin LED1_Pin LED2_Pin */
-  GPIO_InitStruct.Pin = EN_HV_Pin|LED1_Pin|LED2_Pin;
+  /*Configure GPIO pins : EN_HV_Pin LED1_Pin LED2_Pin AUDIO_RESET_Pin */
+  GPIO_InitStruct.Pin = EN_HV_Pin|LED1_Pin|LED2_Pin|AUDIO_RESET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -1069,13 +1073,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(AUDIO_CS_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : AUDIO_RESET_Pin */
-  GPIO_InitStruct.Pin = AUDIO_RESET_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(AUDIO_RESET_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : AUDIO_BUSY_Pin */
   GPIO_InitStruct.Pin = AUDIO_BUSY_Pin;
@@ -1257,6 +1254,9 @@ static void stop_multi_timer(void)
 void setSonication(int32_t mode)
 {
   if(mode  == 0) {
+    
+    sound_Paly(2);
+    
     init_timing();
     
     GPIO_HV_Enable(0);
@@ -1273,6 +1273,7 @@ void setSonication(int32_t mode)
     stop_single_timer();
 #endif
   } else {
+    sound_Paly(1);
     set_timing();
 #if defined(CONFIG_MULTI)
     start_multi_timer(RF_CH0);
@@ -1336,17 +1337,17 @@ int32_t setTBDAndDuty(int32_t tbd,int32_t duty)
   char str[64];
   int32_t PRP;
 
-  // duty?�� 1 ~ 100 ?�� 값을 �??�?? ?�� ?��?��
-  // tbd ?�� 0 ?�� 값을 �??질수 ?��?��
+  // duty?�� 1 ~ 100 ?�� 값을 �?????�????? ?�� ?��?��
+  // tbd ?�� 0 ?�� 값을 �?????질수 ?��?��
 
-  //case 1 : tbd == 0 ?��경우 rpr ?�� 0 ?���?? ?��?��
-  //case 2 : duty�?? 0 ?�� 경우 tbd �?? 0 �?? ?��?�� ?���?? 처리
+  //case 1 : tbd == 0 ?��경우 rpr ?�� 0 ?���????? ?��?��
+  //case 2 : duty�????? 0 ?�� 경우 tbd �????? 0 �????? ?��?�� ?���????? 처리
   if(tbd == 0) {
     PRP = 0;
     return (PRP);
   }
 
-  //case 3:  duty�?? 100 ?�� rpr ?�� 값�? ??
+  //case 3:  duty�????? 100 ?�� rpr ?�� 값�? ??
 
   // rpr = (tbd/duty)*100;
   // PRP = (int32_t)(tbd*(float)(100/duty));
@@ -1502,12 +1503,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
    */
 #if defined(DEBUG_UART3)
   if(huart->Instance == USART3 || huart->Instance == USART1)
-#elif defined(DEBUG_UART2)
-  if(huart->Instance == USART2 || huart->Instance == USART1)
 #else
   if(huart->Instance == USART1)
 #endif 
-  {
+  { 
     char  ch = (char)UARTRxBuff[UARTRxBuffIdx];
     switch (ch)
     {
@@ -1547,13 +1546,18 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     
 #if defined(DEBUG_UART3)
   HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);
-  HAL_UART_Receive_IT(&huart3,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);
-#elif defined(DEBUG_UART2)
-  HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);
-  HAL_UART_Receive_IT(&huart2,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
+  HAL_UART_Receive_IT(&huart3,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1); 
 #else
   HAL_UART_Receive_IT(&huart1,(uint8_t*)&UARTRxBuff[UARTRxBuffIdx],1);  
 #endif    
+  }
+  
+  if(huart->Instance == USART2)
+  {
+    char  ch = (char)UARTRxEEGBuff[UARTRxEEGBuffIdx];
+    HAL_UART_Receive_IT(&huart2,(uint8_t*)&UARTRxEEGBuff[UARTRxEEGBuffIdx++],1);
+    
+    if(UARTRxEEGBuffIdx >= 128) UARTRxEEGBuffIdx = 0;
   }
 }
 

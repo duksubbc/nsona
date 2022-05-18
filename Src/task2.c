@@ -16,6 +16,8 @@
 extern TIM_HandleTypeDef htim7;
 extern CONFIG_T gConfig;
 
+extern void sound_Paly(uint8_t);
+
 ////////////////////////////////////////////////////////////
 
 BUFFER_t USART_Buffer;

@@ -101,11 +101,6 @@ typedef struct _timer_t {
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
-#define AUDIO_CS_LOW()          (AUDIO_CS_GPIO_Port->BSRR = AUDIO_CS_Pin << 16)
-#define AUDIO_CS_HI()           (AUDIO_CS_GPIO_Port->BSRR = AUDIO_CS_Pin)
-
-#define AUDIO_RESET_LOW()       (AUDIO_RESET_GPIO_Port->BSRR = AUDIO_RESET_Pin << 16)
-#define AUDIO_RESET_HI()        (AUDIO_RESET_GPIO_Port->BSRR = AUDIO_RESET_Pin)
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
@@ -285,6 +280,7 @@ extern void LED1_ON(uint8_t on);
 #define RF_DEF_DELAY_CH4        from100uSEC(1)
 #define RF_DEF_DELAY_CH5        from100uSEC(1)
 #define RF_DEF_DELAY_CH6        from100uSEC(1)
+
 
 extern uint8_t  console_debug ;
 /* USER CODE END Private defines */

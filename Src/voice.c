@@ -2,11 +2,15 @@
 #include "main.h"
 
 
+extern SPI_HandleTypeDef hspi1;
+
 //******************************* Volume Level ******************************//
 #define VOL_MUTE    0x0000
 #define VOL_MIN     0x4407
 #define VOL_NORMAL  0x4404
 #define VOL_MAX     0x4400
+
+
 
 uint16_t         g_SoundVolume;
 //VoiceMode 	 g_VoiceMode;
@@ -19,10 +23,24 @@ typedef enum _VOICE_ID {
 } VOICE_ID;
 
 /* Private macro -------------------------------------------------------------*/
-#define IO_O_VSCL_SetLow()	do{HAL_GPIO_WritePin(GPIOB, SPI_SCK_Pin,RESET);  HAL_Delay(10);}  while(0)
-#define IO_O_VSCL_SetHigh()	do{HAL_GPIO_WritePin(GPIOB, SPI_SCK_Pin,SET); HAL_Delay(10);} while(0)
-#define IO_O_VSDA_SetLow()	do{HAL_GPIO_WritePin(GPIOB, SPI_MOSI_Pin,RESET); HAL_Delay(10);}  while(0)
-#define IO_O_VSDA_SetHigh()	do{HAL_GPIO_WritePin(GPIOB, SPI_MOSI_Pin,SET);HAL_Delay(10);} while(0)
+
+//#define AUDIO_CS_LOW()          (AUDIO_CS_GPIO_Port->BSRR = AUDIO_CS_Pin << 16)
+//#define AUDIO_CS_HI()           (AUDIO_CS_GPIO_Port->BSRR = AUDIO_CS_Pin)
+//
+//#define AUDIO_RESET_LOW()       (AUDIO_RESET_GPIO_Port->BSRR = AUDIO_RESET_Pin << 16)
+//#define AUDIO_RESET_HI()        (AUDIO_RESET_GPIO_Port->BSRR = AUDIO_RESET_Pin)
+
+
+#define AUDIO_CS_LOW()	        do{HAL_GPIO_WritePin(GPIOA, AUDIO_CS_Pin,RESET);  HAL_Delay(10);}  while(0)
+#define AUDIO_CS_HI()	        do{HAL_GPIO_WritePin(GPIOA, AUDIO_CS_Pin,SET); HAL_Delay(10);} while(0)
+
+#define AUDIO_RESET_LOW()       do{HAL_GPIO_WritePin(GPIOC, AUDIO_RESET_Pin,RESET);  HAL_Delay(1);}  while(0)
+#define AUDIO_RESET_HI()        do{HAL_GPIO_WritePin(GPIOC, AUDIO_RESET_Pin,SET); HAL_Delay(1);} while(0)
+
+#define IO_O_VSCL_SetLow()	do{HAL_GPIO_WritePin(GPIOB, SPI_SCK_Pin,RESET);  HAL_Delay(1);}  while(0)
+#define IO_O_VSCL_SetHigh()	do{HAL_GPIO_WritePin(GPIOB, SPI_SCK_Pin,SET); HAL_Delay(1);} while(0)
+#define IO_O_VSDA_SetLow()	do{HAL_GPIO_WritePin(GPIOB, SPI_MOSI_Pin,RESET); HAL_Delay(1);}  while(0)
+#define IO_O_VSDA_SetHigh()	do{HAL_GPIO_WritePin(GPIOB, SPI_MOSI_Pin,SET);HAL_Delay(1);} while(0)
 
 //static void I2C_data(uint16_t cmd);
 //static uint8_t is_sound_chip_busy(void);
@@ -31,10 +49,10 @@ typedef enum _VOICE_ID {
 //static void sound_volume(uint16_t cmd);
 //static void sound_output(VOICE_ID vid);
 
-static void I2C_data(uint16_t cmd)
+static void I2C_data(uint32_t cmd)
 {
-  uint16_t mask = 0;
-  for(mask = 0x8000; mask > 0; mask >>= 1)
+  uint32_t mask = 0;
+  for(mask = 0x800000; mask > 0; mask >>= 1)
   {
     IO_O_VSCL_SetLow();
     if(cmd & mask)
@@ -105,8 +123,6 @@ void sound_output(VOICE_ID vid)
 {
   //u8 cnt=0;
   uint32_t old_time, temp;
-//  if(g_VoiceMode == eMODE_OFF)//if (sound_mode == 0)
-//          return;
 
   uint16_t cmd = 0;
 
@@ -123,48 +139,41 @@ void sound_output(VOICE_ID vid)
           IO_O_VSCL_SetHigh();
           IO_O_VSDA_SetHigh();
   }
-  
-  
-    // voice ic test
-//  {
-//    uint8_t data[2];
-//    
-//    
-//    HAL_Delay(100);    
-//    AUDIO_CS_LOW();
-//      
-//    data[0] = 0xE1;
-//    data[1] = 0x18;
-//
-//    HAL_SPI_Transmit(&hspi1,(uint8_t *)&data, 2, 100);
-//    
-//    data[0] = 0xE0;
-//    data[1] = 0x01;
-//    HAL_SPI_Transmit(&hspi1,(uint8_t *)&data, 2, 100);
-//    
-//    data[0] = 0xE1;
-//    data[1] = 0x18;
-//    
-//    HAL_SPI_Transmit(&hspi1,(uint8_t *)&data, 2, 100);
-//    
-//    data[0] = 0xE2;
-//    data[1] = 0x00;
-//
-//    HAL_SPI_Transmit(&hspi1,(uint8_t *)&data, 2, 100);
-//    
-//    data[0] = 0xE3;
-//    data[1] = 0x00;
-//
-//    HAL_SPI_Transmit(&hspi1,(uint8_t *)&data, 2, 100);
-//    HAL_Delay(100);    
-//    AUDIO_CS_HI();
-//  }
+}
 
-//  while(1){
-//      wdr;
-//      if(!is_sound_chip_busy()) break;
-//      temp = get_interval(old_time, g_msTickCount);
-//      if(temp>3000) break;	// Maximum timeout 3 seconds
-//  }
+void sound_Paly(uint8_t vid)
+{
+  uint16_t data = 0;
+  data |= 0xE0 << 8;
+  data |= vid;
+  AUDIO_CS_LOW();
+  HAL_SPI_Transmit(&hspi1,(uint8_t *)&data, 1,100);
+  AUDIO_CS_HI();
 
+}
+
+uint16_t gdata = 0;
+void sound_enable(void)
+{
+  int i;
+  uint16_t data = 0;
+  
+  AUDIO_RESET_HI();
+  AUDIO_CS_HI();
+  
+  HAL_Delay(10);
+
+  for(i =0 ; i < 4;i++)
+  {
+    data |= (0xE0+i) << 8;
+    if(i == 1)
+      data |= 0x08 ;
+    else
+      data |= 00 ;
+    
+    AUDIO_CS_LOW();
+    HAL_SPI_Transmit(&hspi1,(uint8_t *)&data, 1,100);
+    AUDIO_CS_HI();
+    data = 0;
+  }
 }
