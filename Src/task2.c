@@ -158,7 +158,7 @@ void userTask02(CONFIG_T *sysconf)
                   sysconf->n_setImpedance =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH1] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH1] =  from100uSEC(ParseNumber(ptr,NULL));
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   sysconf->n_setAbnormalStopMode =  ParseNumber(ptr,NULL);
@@ -183,7 +183,7 @@ void userTask02(CONFIG_T *sysconf)
                   sysconf->n_setISI =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH2] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH2] =  from100uSEC(ParseNumber(ptr,NULL));
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   sysconf->n_setAbnormalStopMaxV =  ParseNumber(ptr,NULL);
@@ -197,7 +197,7 @@ void userTask02(CONFIG_T *sysconf)
                   sysconf->n_setTD =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH3] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH3] =  from100uSEC(ParseNumber(ptr,NULL));
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   sysconf->n_setAbnormalStopMaxI =  ParseNumber(ptr,NULL);
@@ -205,7 +205,7 @@ void userTask02(CONFIG_T *sysconf)
                 break;
               case 5:
                 if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH4] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH4] =  from100uSEC(ParseNumber(ptr,NULL));
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   sysconf->n_setAbnormalStopMinV =  ParseNumber(ptr,NULL);
@@ -213,7 +213,7 @@ void userTask02(CONFIG_T *sysconf)
                 break;
               case 6:
                 if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH5] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH5] =  from100uSEC(ParseNumber(ptr,NULL));
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   sysconf->n_setAbnormalStopMinI =  ParseNumber(ptr,NULL);
@@ -221,7 +221,7 @@ void userTask02(CONFIG_T *sysconf)
                 break;
               case 7:
                 if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH6] =  ParseNumber(ptr,NULL);
+                  sysconf->n_setDelay[RF_CH6] =  from100uSEC(ParseNumber(ptr,NULL));
                 }
                 break;  
               default: break;

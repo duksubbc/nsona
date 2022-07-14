@@ -194,18 +194,18 @@ void Load_Env(CONFIG_T *env)
      env->setSD  =  env->setPRP*5;      // range 1 ~ 500ms  (1000 ~ 500000)
      env->setISI =  env->setSD;       // s
      env->setBI  = env->setSD + env->setISI;    // s 
-     env->setTD  = 10*SEC;     // s 
+     env->setTD  = 100*SEC;     // s 
 
      env->setImpedance = 50;
     
     
     env->setDelay[RF_CH0] = 0*USEC100;
     env->setDelay[RF_CH1] = 0*USEC100;
-    env->setDelay[RF_CH2] = 10*USEC100;
-    env->setDelay[RF_CH3] = 20*USEC100;
-    env->setDelay[RF_CH4] = 30*USEC100;
-    env->setDelay[RF_CH5] = 40*USEC100;
-    env->setDelay[RF_CH6] = 50*USEC100;
+    env->setDelay[RF_CH2] = from100uSEC(1);//10*USEC100;
+    env->setDelay[RF_CH3] = from100uSEC(2);//20*USEC100;
+    env->setDelay[RF_CH4] = from100uSEC(3);//30*USEC100;
+    env->setDelay[RF_CH5] = //40*USEC100;
+    env->setDelay[RF_CH6] = //50*USEC100;
     
 
     env->setAbnormalStopMode = 0;
@@ -1276,7 +1276,19 @@ void setSonication(int32_t mode)
     sound_Paly(1);
     set_timing();
 #if defined(CONFIG_MULTI)
+#if !defined(CONFIG_MULTI_DELAY)
     start_multi_timer(RF_CH0);
+#else
+    if(gDelay[RF_CH1] == 0)
+      start_multi_timer(RF_CH1);
+    if(gDelay[RF_CH2] == 0)
+      start_multi_timer(RF_CH2);
+    if(gDelay[RF_CH3] == 0)
+      start_multi_timer(RF_CH3);
+    if(gDelay[RF_CH4] == 0)
+      start_multi_timer(RF_CH4);
+#endif
+    
     GPIO_HV_Enable(1);
     // STHV748_THSD_Enable(DISABLE);
     // STHV748_THSD_Enable(ENABLE);
@@ -1454,6 +1466,19 @@ void userTask03(CONFIG_T *sysconf)
 
         DBG_INFO("\r\nUpdate setAbnormalStopMode\r\n");
         displayEnv(sysconf,CMD_getAbnormalStopMode);
+      }
+      
+      
+      if(sysconf->updateEnv & (1 << CMD_setDelay))  {
+        sysconf->updateEnv &= ~(1 << CMD_setDelay);
+        
+        sysconf->setDelay[RF_CH0] = sysconf->n_setDelay[RF_CH0];
+        sysconf->setDelay[RF_CH1] = sysconf->n_setDelay[RF_CH1];
+        sysconf->setDelay[RF_CH2] = sysconf->n_setDelay[RF_CH2];
+        sysconf->setDelay[RF_CH3] = sysconf->n_setDelay[RF_CH3];
+        sysconf->setDelay[RF_CH4] = sysconf->n_setDelay[RF_CH4];
+        sysconf->setDelay[RF_CH5] = sysconf->n_setDelay[RF_CH5];
+        sysconf->setDelay[RF_CH6] = sysconf->n_setDelay[RF_CH6];
       }
 
       if(sysconf->updateEnv & (1 << CMD_sonication)) {
@@ -1647,6 +1672,33 @@ static void single_RF_generate(void)
 static void multi_RF_generate(void)
 {
   static int32_t  preTD = 0;
+#if defined(CONFIG_MULTI_DELAY)
+  if(gDelay[RF_CH1] > 0) {
+    gDelay[RF_CH1]--;
+    if(gDelay[RF_CH1] == 0)
+      start_multi_timer(RF_CH1);
+  }
+  
+  if(gDelay[RF_CH2] > 0) {
+    gDelay[RF_CH2]--;
+    if(gDelay[RF_CH2] == 0)
+      start_multi_timer(RF_CH2);
+  }
+  
+  if(gDelay[RF_CH3] > 0) {
+    gDelay[RF_CH3]--;
+    if(gDelay[RF_CH3] == 0)
+      start_multi_timer(RF_CH3);
+  }
+  
+  if(gDelay[RF_CH4] > 0) {
+    gDelay[RF_CH4]--;
+    if(gDelay[RF_CH4] == 0)
+      start_multi_timer(RF_CH4);
+  }
+#endif
+  
+    
 
    if(gTD[RF_CH1]--) {
       //BI cycle
