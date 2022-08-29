@@ -199,13 +199,13 @@ void Load_Env(CONFIG_T *env)
      env->setImpedance = 50;
     
     
-    env->setDelay[RF_CH0] = 0*USEC100;
-    env->setDelay[RF_CH1] = 0*USEC100;
+    env->setDelay[RF_CH0] = 0;
+    env->setDelay[RF_CH1] = 0;
     env->setDelay[RF_CH2] = from100uSEC(1);//10*USEC100;
     env->setDelay[RF_CH3] = from100uSEC(2);//20*USEC100;
     env->setDelay[RF_CH4] = from100uSEC(3);//30*USEC100;
-    env->setDelay[RF_CH5] = //40*USEC100;
-    env->setDelay[RF_CH6] = //50*USEC100;
+    env->setDelay[RF_CH5] = from100uSEC(3);//40*USEC100;
+    env->setDelay[RF_CH6] = from100uSEC(3);//50*USEC100;
     
 
     env->setAbnormalStopMode = 0;
@@ -1349,17 +1349,17 @@ int32_t setTBDAndDuty(int32_t tbd,int32_t duty)
   char str[64];
   int32_t PRP;
 
-  // duty?�� 1 ~ 100 ?�� 값을 �?????�????? ?�� ?��?��
-  // tbd ?�� 0 ?�� 값을 �?????질수 ?��?��
+  // duty?�� 1 ~ 100 ?�� 값을 �?????�????? ?�� ?��?��
+  // tbd ?�� 0 ?�� 값을 �?????질수 ?��?��
 
-  //case 1 : tbd == 0 ?��경우 rpr ?�� 0 ?���????? ?��?��
-  //case 2 : duty�????? 0 ?�� 경우 tbd �????? 0 �????? ?��?�� ?���????? 처리
+  //case 1 : tbd == 0 ?��경우 rpr ?�� 0 ?���????? ?��?��
+  //case 2 : duty�????? 0 ?�� 경우 tbd �????? 0 �????? ?��?�� ?���????? 처리
   if(tbd == 0) {
     PRP = 0;
     return (PRP);
   }
 
-  //case 3:  duty�????? 100 ?�� rpr ?�� 값�? ??
+  //case 3:  duty�????? 100 ?�� rpr ?�� 값�? ??
 
   // rpr = (tbd/duty)*100;
   // PRP = (int32_t)(tbd*(float)(100/duty));

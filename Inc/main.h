@@ -230,7 +230,9 @@ extern void LED1_ON(uint8_t on);
 
 
 
-                            
+#define TOUSEC   (4)                        
+#define uSECTotick(x)    (x/4)
+
 #define USEC100  (1)
 #define SEC      (250000)
 //#define SEC      (1000000)       

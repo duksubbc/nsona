@@ -158,7 +158,7 @@ void userTask02(CONFIG_T *sysconf)
                   sysconf->n_setImpedance =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH1] =  from100uSEC(ParseNumber(ptr,NULL));
+                  sysconf->n_setDelay[RF_CH2] =  uSECTotick(ParseNumber(ptr,NULL));
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   sysconf->n_setAbnormalStopMode =  ParseNumber(ptr,NULL);
@@ -183,7 +183,7 @@ void userTask02(CONFIG_T *sysconf)
                   sysconf->n_setISI =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH2] =  from100uSEC(ParseNumber(ptr,NULL));
+                  sysconf->n_setDelay[RF_CH3] =  uSECTotick(ParseNumber(ptr,NULL));
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   sysconf->n_setAbnormalStopMaxV =  ParseNumber(ptr,NULL);
@@ -197,7 +197,7 @@ void userTask02(CONFIG_T *sysconf)
                   sysconf->n_setTD =  ParseNumber(ptr,NULL);
                 }
                 else if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH3] =  from100uSEC(ParseNumber(ptr,NULL));
+                  sysconf->n_setDelay[RF_CH4] =  uSECTotick(ParseNumber(ptr,NULL));
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   sysconf->n_setAbnormalStopMaxI =  ParseNumber(ptr,NULL);
@@ -205,7 +205,7 @@ void userTask02(CONFIG_T *sysconf)
                 break;
               case 5:
                 if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH4] =  from100uSEC(ParseNumber(ptr,NULL));
+                  sysconf->n_setDelay[RF_CH5] =  uSECTotick(ParseNumber(ptr,NULL));
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   sysconf->n_setAbnormalStopMinV =  ParseNumber(ptr,NULL);
@@ -213,17 +213,17 @@ void userTask02(CONFIG_T *sysconf)
                 break;
               case 6:
                 if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH5] =  from100uSEC(ParseNumber(ptr,NULL));
+                  sysconf->n_setDelay[RF_CH6] =  uSECTotick(ParseNumber(ptr,NULL));
                 }
                 else if(id == CMD_setAbnormalStopMode) {
                   sysconf->n_setAbnormalStopMinI =  ParseNumber(ptr,NULL);
                 }
                 break;
-              case 7:
-                if(id == CMD_setDelay) {
-                  sysconf->n_setDelay[RF_CH6] =  from100uSEC(ParseNumber(ptr,NULL));
-                }
-                break;  
+              // case 7:
+              //   if(id == CMD_setDelay) {
+              //     sysconf->n_setDelay[RF_CH7] =  from100uSEC(ParseNumber(ptr,NULL));
+              //   }
+              //   break;  
               default: break;
             }
 
@@ -367,13 +367,13 @@ static void checkCmdArgs(CONFIG_T *sysconf,COMMAMD_ID id, uint8_t num)
       sysconf->updateEnv |= (1 << CMD_setDelay) ;
       xprintf("\r\nsetDelay OK");
     } else {
-      sysconf->n_setDelay[RF_CH0] = sysconf->setDelay[RF_CH0];
-      sysconf->n_setDelay[RF_CH1] = sysconf->setDelay[RF_CH1];
+      //sysconf->n_setDelay[RF_CH0] = sysconf->setDelay[RF_CH0];
+      //sysconf->n_setDelay[RF_CH1] = sysconf->setDelay[RF_CH1];
       sysconf->n_setDelay[RF_CH2] = sysconf->setDelay[RF_CH2];
       sysconf->n_setDelay[RF_CH3] = sysconf->setDelay[RF_CH3];
       sysconf->n_setDelay[RF_CH4] = sysconf->setDelay[RF_CH4];
-      sysconf->n_setDelay[RF_CH5] = sysconf->setDelay[RF_CH5];
-      sysconf->n_setDelay[RF_CH6] = sysconf->setDelay[RF_CH6];
+      //sysconf->n_setDelay[RF_CH5] = sysconf->setDelay[RF_CH5];
+      //sysconf->n_setDelay[RF_CH6] = sysconf->setDelay[RF_CH6];
       
       if(num > 5)
         DBG_ERROR("\r\nsetsetDelay too many arguments");
@@ -476,10 +476,10 @@ void displayEnv(CONFIG_T *sysconf, COMMAMD_ID id)
       INFO("\r\nTD  = %6d S  (%8d)\r\n",to1sSEC(sysconf->setTD),  sysconf->setTD);
       break;
    case CMD_getDelay:
-      INFO("\r\nCH1  = %6d us (%8d)",    sysconf->setDelay[RF_CH1]*USEC100 , sysconf->setDelay[RF_CH1]);
-      INFO("\r\nCH2  = %6d us (%8d)",    sysconf->setDelay[RF_CH2]*USEC100 , sysconf->setDelay[RF_CH2]);
-      INFO("\r\nCH3  = %6d us (%8d)",    sysconf->setDelay[RF_CH3]*USEC100,  sysconf->setDelay[RF_CH3]);
-      INFO("\r\nCH4  = %6d us (%8d)\r\n",sysconf->setDelay[RF_CH4]*USEC100,  sysconf->setDelay[RF_CH4]);
+      INFO("\r\nCH1  = %6d us (%8d)",    sysconf->setDelay[RF_CH1]*TOUSEC , sysconf->setDelay[RF_CH1]);
+      INFO("\r\nCH2  = %6d us (%8d)",    sysconf->setDelay[RF_CH2]*TOUSEC , sysconf->setDelay[RF_CH2]);
+      INFO("\r\nCH3  = %6d us (%8d)",    sysconf->setDelay[RF_CH3]*TOUSEC,  sysconf->setDelay[RF_CH3]);
+      INFO("\r\nCH4  = %6d us (%8d)\r\n",sysconf->setDelay[RF_CH4]*TOUSEC,  sysconf->setDelay[RF_CH4]);
       break;
    case CMD_getImpedance:
       INFO("\r\nImpedance  = %d \r\n",sysconf->setImpedance);
